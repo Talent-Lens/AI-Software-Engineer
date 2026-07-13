@@ -1,5 +1,9 @@
 # SCHEMA.md
 
+## Target repo (Day 0)
+We're using `psf/requests` (github.com/psf/requests) as our sample repo to index/test against.
+Cloned locally at: D:\test-repos\requests
+
 ## Chunk
 - id: str
 - file_path: str

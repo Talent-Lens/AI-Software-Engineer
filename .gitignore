@@ -1,2 +1,36 @@
-scratch/
+# Virtual environment
 venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Editable install artifacts (from pip install -e .)
+*.egg-info/
+build/
+dist/
+
+# Your local learning scratch work (per earlier decision)
+scratch/
+
+# Chroma's persisted vector database (Day 6 onward — large binary files, don't commit)
+chroma_db/
+
+# Test repos you clone for indexing (e.g. Day 7's `requests` clone)
+test_repo/
+
+# Environment variables / secrets
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter checkpoints (if you use notebooks at all)
+.ipynb_checkpoints/

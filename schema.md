@@ -12,21 +12,32 @@
 
 ### Naming Convention for `Chunk.name`
 
-For chunks with a natural identifier (functions, classes, methods), `name` is just that identifier (e.g. `HTTPBasicAuth`, `__call__`).
+**Boundary rule:** only findings without a natural standalone name use the bracket convention below. `function`, `method`, and `class` chunks already have real, unique identifiers (e.g. `Session.get`, `HTTPBasicAuth`) — they are exempt and never get a bracket suffix.
 
-For findings/chunks without a natural name (e.g. bare `except`, stray `pass`, magic numbers), use the enclosing function/class name plus a bracketed qualifier:
+For findings/chunks without a natural name (e.g. bare `except`, no-arg calls, magic numbers), use the enclosing function/class name plus a bracketed qualifier:
 
 ```
-<enclosing_scope>[<qualifier>]
+<enclosing_scope>[<type>]              # no extra detail to carry
+<enclosing_scope>[<type>:<detail>]     # type carries a specific detail
 ```
+
+Whether a type uses `[<type>]` or `[<type>:<detail>]` depends on whether that finding type has something more specific to say beyond its category:
+
+| Type | Has detail? | Format |
+|---|---|---|
+| `bare_except` | no — nothing more specific to say | `[bare_except]` |
+| `noarg_call` | yes — the call target (`close`, `copy`, etc.) | `[noarg_call:close]` |
+| `magic_number` (hypothetical) | yes — the number itself | `[magic_number:42]` |
 
 Examples:
 - `HTTPBasicAuth.__call__[bare_except]`
-- `Session.rebuild_auth[magic_number]`
+- `Session.request[noarg_call:close]`
+- `Session.rebuild_auth[magic_number:42]`
 
 If there is no enclosing function/class (module-level code), fall back to the filename:
 ```
-<filename>[<qualifier>]
+<filename>[<type>]
+<filename>[<type>:<detail>]
 ```
 Example: `auth.py[bare_except]`
 

@@ -10,7 +10,7 @@ def retrieve_context(collection, query, n_results=3):
         results["documents"][0], results["metadatas"][0], results["distances"][0]
     ):
         chunk = Chunk(
-            id=meta.get("file_path", ""),
+            id=f"{meta['file_path']}::{meta['name']}::{meta['start_line']}",
             file_path=meta["file_path"],
             start_line=meta["start_line"],
             end_line=meta["end_line"],

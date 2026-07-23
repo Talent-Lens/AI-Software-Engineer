@@ -1,5 +1,5 @@
 import os
-from schema import Chunk
+from indexing.chunker import chunk_file
 from indexing.vector_store import get_collection
 
 
@@ -12,33 +12,25 @@ def get_python_files(folder_path):
     return py_files
 
 
-def read_file(path):
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        return f.read()
-
-
-def index_repository(folder_path):
-    collection = get_collection(name="repo_index")
+def index_repository(folder_path, reset=True):
+    collection = get_collection(name="repo_index", reset=reset)
     py_files = get_python_files(folder_path)
 
-    chunks = []
+    all_chunks = []
     for path in py_files:
-        content = read_file(path)
-        if content.strip():
-            chunk = Chunk(
-                id=path,
-                file_path=path,
-                start_line=1,
-                end_line=len(content.splitlines()),
-                type="file",  # placeholder until Tree-sitter chunking (Day 10-14)
-                name=os.path.basename(path),
-                code=content,
-            )
-            chunks.append(chunk)
+        try:
+            chunks = chunk_file(path)
+            all_chunks.extend(chunks)
+        except Exception as e:
+            print(f"Skipped {path}: {e}")
+
+    if not all_chunks:
+        print("No chunks found.")
+        return collection
 
     collection.add(
-        documents=[c.code for c in chunks],
-        ids=[c.id for c in chunks],
+        documents=[c.code for c in all_chunks],
+        ids=[c.id for c in all_chunks],
         metadatas=[
             {
                 "file_path": c.file_path,
@@ -47,17 +39,18 @@ def index_repository(folder_path):
                 "type": c.type,
                 "name": c.name,
             }
-            for c in chunks
+            for c in all_chunks
         ],
     )
-    print(f"Indexed {len(chunks)} files.")
+    print(f"Indexed {len(all_chunks)} chunks from {len(py_files)} files.")
     return collection
 
 
-def search(collection, query, n_results=3):
+def search(collection, query, n_results=5):
     results = collection.query(query_texts=[query], n_results=n_results)
     for doc, meta, dist in zip(
         results["documents"][0], results["metadatas"][0], results["distances"][0]
     ):
-        print(f"\n[{meta['file_path']}] (distance={dist:.3f})")
+        print(f"\n[{meta['type']}] {meta['name']} — {meta['file_path']} "
+              f"(lines {meta['start_line']}-{meta['end_line']}, distance={dist:.3f})")
         print(doc[:200], "...")

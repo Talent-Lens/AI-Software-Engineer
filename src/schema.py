@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from pydantic import BaseModel
+from typing import Optional
+
 @dataclass
 class Chunk:
     id: str
@@ -33,9 +36,8 @@ class RetrievalResult:
     score: float
     query: str
 
-@dataclass
-class AgentResponse:
+class AgentResponse(BaseModel):
     agent_name: str
     summary: str
     details: dict
-    confidence: float | None = None
+    confidence: Optional[float] = None

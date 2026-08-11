@@ -1,38 +1,66 @@
 # Virtual environment
 venv/
 .venv/
+env/
+ENV/
 
-# Python cache
+# Python cache & bytecode
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
+*.pyd
 
-# Editable install artifacts (from pip install -e .)
+# Packaging & Build artifacts
 *.egg-info/
+**/*.egg-info/
+*.egg
 build/
 dist/
+wheels/
+sdist/
 
-# Your local learning scratch work (per earlier decision)
+# Test & Lint caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local learning & test repositories
 scratch/
-
-# Chroma's persisted vector database (Day 6 onward — large binary files, don't commit)
-chroma_db/
-
-# Test repos you clone for indexing (e.g. Day 7's `requests` clone)
 test_repo/
 
-# Environment variables / secrets
-.env
+# Vector database & database files
+chroma_db/
+*.sqlite3
+*.db
 
-# IDE
+# Environment variables & secrets
+.env
+.env.*
+*.pem
+*.key
+
+# IDEs & Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
-# OS
+# Operating System
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Jupyter checkpoints (if you use notebooks at all)
+# Logs & Temporary files
+*.log
+*.tmp
+*.temp
+
+# Jupyter checkpoints
 .ipynb_checkpoints/
-ai_software_engineer.egg-info/
 

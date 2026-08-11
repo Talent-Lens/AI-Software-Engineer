@@ -1,6 +1,7 @@
 import os
-from indexing.chunker import chunk_file
-from indexing.vector_store import get_collection
+from src.indexing.chunker import chunk_file
+from src.indexing.vector_store import get_collection
+
 
 
 def get_python_files(folder_path):

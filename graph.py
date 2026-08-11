@@ -2,7 +2,7 @@
 Full pipeline: Bug Detection Agent -> Review Agent -> retry or final answer.
 """
 
-from typing import TypedDict
+from typing import TypedDict, Any, cast
 from langgraph.graph import StateGraph, END
 
 from src.agents.bug_detection import analyze_and_explain
@@ -12,6 +12,7 @@ MAX_ATTEMPTS = 3
 
 
 class PipelineState(TypedDict):
+
     filepath: str
     agent_response: dict
     review: dict
@@ -42,7 +43,7 @@ def route_after_review(state: PipelineState) -> str:
         return "retry"
 
 
-graph = StateGraph(PipelineState)
+graph = StateGraph(cast(Any, PipelineState))
 graph.add_node("detect", detect_node)
 graph.add_node("review", review_node)
 
@@ -58,6 +59,9 @@ graph.add_conditional_edges(
 app = graph.compile()
 
 
+import os
+
+
 def run_pipeline(filepath: str) -> dict:
     return app.invoke({
         "filepath": filepath,
@@ -68,9 +72,10 @@ def run_pipeline(filepath: str) -> dict:
 
 
 if __name__ == "__main__":
-    final = run_pipeline(r"D:\test-repos\test_bare_except_file.py")
+    sample_path = __file__
+    final = run_pipeline(sample_path)
     print("-" * 60)
     print("FINAL SUMMARY:")
-    print(final["agent_response"]["summary"])
+    print(final.get("agent_response", {}).get("summary", "No summary"))
     print("-" * 60)
-    print("REVIEW:", final["review"])
+    print("REVIEW:", final.get("review", {}))

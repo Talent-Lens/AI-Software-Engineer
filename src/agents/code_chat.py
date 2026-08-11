@@ -1,3 +1,8 @@
+"""
+Code Chat Agent — Interactive Q&A agent for repository queries using RAG context.
+Task: TASK-FS1 / TASK-FS2 (FastAPI & React Chat)
+"""
+
 import requests
 import json
 from indexing.vector_store import get_collection

@@ -1,11 +1,14 @@
 import requests
-from schema import Chunk, RetrievalResult
+from src.schema import Chunk, RetrievalResult
 
 
 def retrieve_context(collection, query, n_results=3):
     results = collection.query(query_texts=[query], n_results=n_results)
 
     retrieval_results = []
+    if not results or not results.get("documents") or not results["documents"][0]:
+        return retrieval_results
+
     for doc, meta, dist in zip(
         results["documents"][0], results["metadatas"][0], results["distances"][0]
     ):
@@ -37,17 +40,17 @@ Question: {question}
 Answer:"""
 
 
-def ask_ollama(prompt, model="llama3.2:1b"):
+def ask_ollama(prompt, model="llama3.2:1b", timeout=60):
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
             json={"model": model, "prompt": prompt, "stream": False},
-            timeout=60,
+            timeout=timeout,
         )
         response.raise_for_status()
-        return response.json()["response"]
+        return response.json().get("response", "No response content returned from Ollama.")
     except Exception as e:
-        return f"Error contacting Ollama: {e}"
+        return f"Error querying Ollama ({model}): {e}"
 
 
 def rag_query(collection, question):

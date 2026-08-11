@@ -1,7 +1,7 @@
 # src/indexing/chunker.py
 from tree_sitter import Language, Parser
 import tree_sitter_python as tspython
-from schema import Chunk
+from src.schema import Chunk
 
 PY_LANGUAGE = Language(tspython.language())
 parser = Parser(PY_LANGUAGE)

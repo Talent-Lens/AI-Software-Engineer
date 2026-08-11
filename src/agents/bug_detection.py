@@ -130,11 +130,22 @@ If the tool reports no real issues, just say the file looks clean."""
 # Public entry point
 # ---------------------------------------------------------------------------
 
+import os
+
+
 def analyze_and_explain(filepath: str) -> dict:
     """
     Runs the bug detection agent on a file, returns an AgentResponse-shaped dict:
       { agent_name, summary, details, confidence }
     """
+    if not os.path.exists(filepath):
+        return {
+            "agent_name": "bug_detection",
+            "summary": f"File does not exist: {filepath}",
+            "details": {"error": "File not found"},
+            "confidence": None,
+        }
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"Please check {filepath} for bugs."},
@@ -150,33 +161,47 @@ def analyze_and_explain(filepath: str) -> dict:
             "confidence": None,
         }
 
-    tool_calls = response["message"].get("tool_calls")
+    message = response["message"] if isinstance(response, dict) else getattr(response, "message", {})
+    tool_calls = message.get("tool_calls") if isinstance(message, dict) else getattr(message, "tool_calls", None)
 
     if not tool_calls:
+        content = message.get("content", "") if isinstance(message, dict) else getattr(message, "content", "")
         return {
             "agent_name": "bug_detection",
-            "summary": response["message"]["content"],
+            "summary": content,
             "details": {"raw_findings": None},
             "confidence": None,
         }
 
     call = tool_calls[0]
-    raw_result = TOOL_IMPLEMENTATIONS[call["function"]["name"]](call["function"]["arguments"])
+    func_info = call.get("function", {}) if isinstance(call, dict) else getattr(call, "function", {})
+    func_name = func_info.get("name") if isinstance(func_info, dict) else getattr(func_info, "name", None)
+    func_args = func_info.get("arguments") if isinstance(func_info, dict) else getattr(func_info, "arguments", {})
 
-    messages.append(response["message"])
+    if func_name in TOOL_IMPLEMENTATIONS:
+        raw_result = TOOL_IMPLEMENTATIONS[func_name](func_args)
+    else:
+        raw_result = run_bug_scan(filepath)
+
+    messages.append(message)
     messages.append({"role": "tool", "content": raw_result})
 
-    final_response = ollama.chat(model=MODEL_NAME, messages=messages, tools=TOOLS)
+    try:
+        final_response = ollama.chat(model=MODEL_NAME, messages=messages, tools=TOOLS)
+        final_msg = final_response["message"] if isinstance(final_response, dict) else getattr(final_response, "message", {})
+        final_content = final_msg.get("content", "") if isinstance(final_msg, dict) else getattr(final_msg, "content", "")
+    except Exception:
+        final_content = f"Scan complete. Raw findings:\n{raw_result}"
 
     return {
         "agent_name": "bug_detection",
-        "summary": final_response["message"]["content"],
+        "summary": final_content,
         "details": {"raw_findings": raw_result},
         "confidence": None,
     }
 
 
 if __name__ == "__main__":
-    # quick manual test
-    result = analyze_and_explain(r"D:\test-repos\test_bare_except_file.py")
-    print(result["summary"])
+    # quick manual test using current file
+    result = analyze_and_explain(__file__)
+    print(result["summary"])

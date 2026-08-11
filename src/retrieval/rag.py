@@ -38,11 +38,16 @@ Answer:"""
 
 
 def ask_ollama(prompt, model="llama3.2:1b"):
-    response = requests.post(
-        "http://localhost:11434/api/generate",
-        json={"model": model, "prompt": prompt, "stream": False},
-    )
-    return response.json()["response"]
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False},
+            timeout=60,
+        )
+        response.raise_for_status()
+        return response.json()["response"]
+    except Exception as e:
+        return f"Error contacting Ollama: {e}"
 
 
 def rag_query(collection, question):

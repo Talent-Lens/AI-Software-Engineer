@@ -4,20 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from pydantic import BaseModel
-from typing import Optional
-
-@dataclass
-class Chunk:
-    id: str
-    file_path: str
-    start_line: int
-    end_line: int
-    type: str
-    name: str
-    code: str
-    embedding: list[float] | None = None
-    
-from dataclasses import dataclass, field
+from typing import Optional, Any
 
 @dataclass
 class Chunk:
@@ -39,5 +26,5 @@ class RetrievalResult:
 class AgentResponse(BaseModel):
     agent_name: str
     summary: str
-    details: dict
+    details: dict[str, Any]
     confidence: Optional[float] = None

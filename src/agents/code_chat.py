@@ -25,16 +25,24 @@ Respond ONLY with JSON matching this structure:
 {{"agent_name": "code_chat", "summary": "your answer here", "details": {{"files_referenced": ["list", "of", "file", "paths"]}}, "confidence": 0.0}}
 """
 
-    response = requests.post(
-        "http://localhost:11434/api/chat",
-        json={
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "format": "json",
-            "stream": False,
-        },
-        timeout=60,
-    )
-
-    parsed = json.loads(response.json()["message"]["content"])
-    return AgentResponse(**parsed)
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/chat",
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "format": "json",
+                "stream": False,
+            },
+            timeout=60,
+        )
+        response.raise_for_status()
+        parsed = json.loads(response.json()["message"]["content"])
+        return AgentResponse(**parsed)
+    except Exception as e:
+        return AgentResponse(
+            agent_name="code_chat",
+            summary=f"Agent failed to run — is Ollama running? Error: {e}",
+            details={"error": str(e)},
+            confidence=None,
+        )

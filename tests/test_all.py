@@ -388,6 +388,17 @@ class TestModelRouter(unittest.TestCase):
         self.assertIn("model_used", res)
 
 
+from src.retrieval.hard_negative_store import record_user_feedback, get_hard_negative_stats
+
+
+class TestHardNegativeStore(unittest.TestCase):
+    def test_record_feedback_api(self):
+        res = record_user_feedback("test query", "c1", "ACCEPT")
+        self.assertEqual(res["status"], "SUCCESS")
+        stats = get_hard_negative_stats()
+        self.assertGreater(stats["total_events"], 0)
+
+
 class TestGraphPipeline(unittest.TestCase):
     @patch("src.agents.bug_detection.ollama.chat")
     def test_run_pipeline(self, mock_chat):
@@ -398,6 +409,7 @@ class TestGraphPipeline(unittest.TestCase):
             }
         }
         code = "def ok(): pass\n"
+
         with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
             f.write(code)
             f.flush()

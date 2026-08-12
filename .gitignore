@@ -64,10 +64,12 @@ desktop.ini
 # Jupyter checkpoints
 .ipynb_checkpoints/
 
-# Evaluation outputs
+# Evaluation & Active Learning outputs
 eval_report.json
 eval_report.csv
 synthetic_benchmark_dataset.json
+hard_negatives_store.json
+
 
 
 

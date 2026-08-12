@@ -527,21 +527,38 @@ If no vulnerabilities are found, return {"vulnerabilities": []}."""
 
     def _call_ollama_api(self, user_prompt: str) -> str | None:
         try:
+            r = requests.get("http://localhost:11434/api/tags", timeout=0.5)
+            if r.status_code != 200:
+                return None
+        except Exception:
+            return None
+
+        try:
+            import concurrent.futures
             import ollama
 
-            response = ollama.chat(
-                model=DEFAULT_OLLAMA_MODEL,
-                messages=[
-                    {"role": "system", "content": self.SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                format="json",
-            )
+            def _chat_call():
+                return ollama.chat(
+                    model=DEFAULT_OLLAMA_MODEL,
+                    messages=[
+                        {"role": "system", "content": self.SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    format="json",
+                )
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_chat_call)
+                response = future.result(timeout=1.0)
+
+
             if isinstance(response, dict):
                 return response.get("message", {}).get("content", "")
             return getattr(getattr(response, "message", None), "content", None)
         except Exception:
             return None
+
+
 
     def _parse_llm_json(self, json_str: str, code_text: str) -> list[Vulnerability]:
         results: list[Vulnerability] = []

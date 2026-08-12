@@ -64,3 +64,8 @@ desktop.ini
 # Jupyter checkpoints
 .ipynb_checkpoints/
 
+# Evaluation outputs
+eval_report.json
+eval_report.csv
+
+

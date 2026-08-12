@@ -353,6 +353,17 @@ class TestDocstringVerifier(unittest.TestCase):
         self.assertIn("corrected_docstring", res["details"])
 
 
+from src.eval.eval_runner import RAGTriadEvalRunner
+
+
+class TestEvalRunner(unittest.TestCase):
+    def test_rag_triad_runner_benchmark(self):
+        runner = RAGTriadEvalRunner()
+        report = runner.run_eval()
+        self.assertGreater(report.total_test_cases, 0)
+        self.assertGreaterEqual(report.mean_context_recall, 0.0)
+
+
 class TestGraphPipeline(unittest.TestCase):
     @patch("src.agents.bug_detection.ollama.chat")
     def test_run_pipeline(self, mock_chat):
@@ -375,5 +386,6 @@ class TestGraphPipeline(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

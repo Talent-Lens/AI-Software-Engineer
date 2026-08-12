@@ -374,6 +374,20 @@ class TestSyntheticBugGenerator(unittest.TestCase):
         self.assertEqual(len(pairs), 10)
 
 
+from src.agents.model_router import analyze_query_complexity, route_and_execute
+
+
+class TestModelRouter(unittest.TestCase):
+    def test_router_complexity_analysis(self):
+        res = analyze_query_complexity("simple lookup")
+        self.assertEqual(res["complexity_tier"], "FAST")
+
+    def test_router_execution(self):
+        res = route_and_execute("simple query")
+        self.assertIn("complexity_tier", res)
+        self.assertIn("model_used", res)
+
+
 class TestGraphPipeline(unittest.TestCase):
     @patch("src.agents.bug_detection.ollama.chat")
     def test_run_pipeline(self, mock_chat):
@@ -388,6 +402,7 @@ class TestGraphPipeline(unittest.TestCase):
             f.write(code)
             f.flush()
             res = run_pipeline(f.name)
+
 
 
         self.assertIn("agent_response", res)

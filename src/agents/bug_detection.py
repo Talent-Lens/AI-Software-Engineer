@@ -169,7 +169,7 @@ def analyze_and_explain(filepath: str) -> dict:
         return {
             "agent_name": "bug_detection",
             "summary": content,
-            "details": {"raw_findings": None},
+            "details": {"raw_findings": None, "filepath": filepath},
             "confidence": None,
         }
 
@@ -196,7 +196,7 @@ def analyze_and_explain(filepath: str) -> dict:
     return {
         "agent_name": "bug_detection",
         "summary": final_content,
-        "details": {"raw_findings": raw_result},
+        "details": {"raw_findings": raw_result, "filepath": filepath},
         "confidence": None,
     }
 

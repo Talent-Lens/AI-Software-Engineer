@@ -5,9 +5,10 @@ Task: TASK-FS1 / TASK-FS2 (FastAPI & React Chat)
 
 import requests
 import json
-from indexing.vector_store import get_collection
-from retrieval.rag import retrieve_context
-from schema import AgentResponse
+from src.indexing.chunker import format_chunk_with_context, chunk_file
+from src.indexing.vector_store import get_collection
+from src.retrieval.rag import retrieve_context
+from src.schema import AgentResponse
 
 collection = get_collection(name="repo_index")
 
@@ -15,8 +16,7 @@ collection = get_collection(name="repo_index")
 def code_chat(question: str, model="qwen2.5:3b") -> AgentResponse:
     results = retrieve_context(collection, question)
     context = "\n\n---\n\n".join(
-        f"File: {r.chunk.file_path} ({r.chunk.type} {r.chunk.name})\n{r.chunk.code}"
-        for r in results
+        format_chunk_with_context(r.chunk) for r in results
     )
 
     prompt = f"""You are a code assistant answering questions about a codebase.

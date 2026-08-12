@@ -62,42 +62,49 @@ def _get_parser_for_lang(lang_key: str) -> Optional[Parser]:
 # ---------------------------------------------------------------------------
 # Language Configuration Matrix
 # ---------------------------------------------------------------------------
-# Extension -> (language_key, class_node_types, function_node_types)
-EXTENSION_CONFIG: dict[str, tuple[str, set[str], set[str]]] = {
+# Extension -> (language_key, class_node_types, function_node_types, import_node_types)
+EXTENSION_CONFIG: dict[str, tuple[str, set[str], set[str], set[str]]] = {
     ".py": (
         "python",
         {"class_definition"},
         {"function_definition"},
+        {"import_statement", "import_from_statement"},
     ),
     ".js": (
         "javascript",
         {"class_declaration", "class"},
         {"function_declaration", "generator_function_declaration", "method_definition", "arrow_function"},
+        {"import_statement"},
     ),
     ".jsx": (
         "javascript",
         {"class_declaration", "class"},
         {"function_declaration", "generator_function_declaration", "method_definition", "arrow_function"},
+        {"import_statement"},
     ),
     ".ts": (
         "typescript",
         {"class_declaration", "interface_declaration", "enum_declaration", "type_alias_declaration"},
         {"function_declaration", "generator_function_declaration", "method_definition", "arrow_function"},
+        {"import_statement"},
     ),
     ".tsx": (
         "tsx",
         {"class_declaration", "interface_declaration", "enum_declaration", "type_alias_declaration"},
         {"function_declaration", "generator_function_declaration", "method_definition", "arrow_function"},
+        {"import_statement"},
     ),
     ".java": (
         "java",
         {"class_declaration", "interface_declaration", "enum_declaration", "record_declaration"},
         {"method_declaration", "constructor_declaration"},
+        {"package_declaration", "import_declaration"},
     ),
     ".go": (
         "go",
         {"type_spec", "type_declaration"},
         {"function_declaration", "method_declaration"},
+        {"package_clause", "import_declaration", "import_spec"},
     ),
 }
 
@@ -128,6 +135,52 @@ def _get_node_identifier(node: Node, source_bytes: bytes) -> str:
     return "anonymous"
 
 
+def _extract_parent_scope(node: Node, class_types: set[str], source_bytes: bytes) -> Optional[str]:
+    """
+    Extract enclosing scope hierarchy (e.g. 'OuterClass.InnerClass' or 'Server')
+    by walking parent AST nodes.
+    """
+    scopes: list[str] = []
+    parent = node.parent
+    while parent is not None:
+        if parent.type in class_types:
+            name = _get_node_identifier(parent, source_bytes)
+            if name and name != "anonymous":
+                scopes.insert(0, name)
+        parent = parent.parent
+
+    if scopes:
+        return ".".join(scopes)
+
+    # For Go receiver methods: func (s *Server) Start()
+    if node.type == "method_declaration":
+        receiver_node = node.child_by_field_name("receiver")
+        if receiver_node and receiver_node.text:
+            rec_text = receiver_node.text.decode("utf-8", errors="ignore")
+            # Extract struct type name from receiver (e.g., '(s *Server)' -> 'Server')
+            clean_rec = rec_text.strip("()").split("*")[-1].strip().split()[-1]
+            if clean_rec:
+                return clean_rec
+
+    return None
+
+
+def _extract_file_imports(root: Node, import_types: set[str], source_bytes: bytes) -> list[str]:
+    """Extract all top-of-file import and package statements."""
+    imports: list[str] = []
+
+    def collect(node: Node):
+        if node.type in import_types:
+            text = source_bytes[node.start_byte:node.end_byte].decode("utf-8", errors="ignore").strip()
+            if text and text not in imports:
+                imports.append(text)
+        for child in node.children:
+            collect(child)
+
+    collect(root)
+    return imports
+
+
 def _is_inside_class_or_struct(node: Node, class_types: set[str]) -> bool:
     """Check if function is enclosed within a class, struct, or interface."""
     parent = node.parent
@@ -138,7 +191,13 @@ def _is_inside_class_or_struct(node: Node, class_types: set[str]) -> bool:
     return False
 
 
-def _line_fallback_chunker(file_path: str, source: str, chunk_lines: int = 35, overlap: int = 5) -> list[Chunk]:
+def _line_fallback_chunker(
+    file_path: str,
+    source: str,
+    imports: list[str] | None = None,
+    chunk_lines: int = 35,
+    overlap: int = 5
+) -> list[Chunk]:
     """Fallback chunker splitting long source files into line-range windows."""
     lines = source.splitlines()
     if not lines:
@@ -147,6 +206,7 @@ def _line_fallback_chunker(file_path: str, source: str, chunk_lines: int = 35, o
     chunks = []
     total_lines = len(lines)
     step = max(1, chunk_lines - overlap)
+    file_imports = imports or []
 
     for start_idx in range(0, total_lines, step):
         end_idx = min(total_lines, start_idx + chunk_lines)
@@ -164,6 +224,8 @@ def _line_fallback_chunker(file_path: str, source: str, chunk_lines: int = 35, o
                 type="code_block",
                 name=f"lines_{start_line}_{end_line}",
                 code=code_slice,
+                parent_name=None,
+                imports=file_imports,
             )
         )
         if end_idx >= total_lines:
@@ -173,12 +235,40 @@ def _line_fallback_chunker(file_path: str, source: str, chunk_lines: int = 35, o
 
 
 # ---------------------------------------------------------------------------
+# Formatting Utility
+# ---------------------------------------------------------------------------
+def format_chunk_with_context(chunk: Chunk) -> str:
+    """
+    Renders a code chunk into a complete, compilable-style prompt context
+    containing file headers, top-level imports, enclosing class/scope context,
+    and line bounds.
+    """
+    header = f"File: {chunk.file_path} (lines {chunk.start_line}-{chunk.end_line})"
+
+    components = [header]
+
+    if chunk.imports:
+        formatted_imports = "\n".join(f"  {imp}" for imp in chunk.imports)
+        components.append(f"Imports / Package Statements:\n{formatted_imports}")
+
+    if chunk.parent_name:
+        components.append(f"Enclosing Scope: {chunk.type} '{chunk.name}' in '{chunk.parent_name}'")
+    else:
+        components.append(f"Scope: {chunk.type} '{chunk.name}'")
+
+    components.append(f"Code:\n{chunk.code}")
+
+    return "\n\n".join(components)
+
+
+# ---------------------------------------------------------------------------
 # Public Entry Point
 # ---------------------------------------------------------------------------
 def chunk_file(file_path: str) -> list[Chunk]:
     """
     Parses a source code file using Tree-Sitter (if language is supported) or falls back
-    to line-based chunking. Returns a list of structured Chunk objects.
+    to line-based chunking. Attaches top-level imports and parent scope hierarchy to
+    every extracted Chunk.
     """
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -196,7 +286,7 @@ def chunk_file(file_path: str) -> list[Chunk]:
     if ext not in EXTENSION_CONFIG:
         return _line_fallback_chunker(file_path, source)
 
-    lang_key, class_types, func_types = EXTENSION_CONFIG[ext]
+    lang_key, class_types, func_types, import_types = EXTENSION_CONFIG[ext]
     parser = _get_parser_for_lang(lang_key)
 
     if parser is None:
@@ -205,6 +295,8 @@ def chunk_file(file_path: str) -> list[Chunk]:
     source_bytes = source.encode("utf-8")
     tree = parser.parse(source_bytes)
     root = tree.root_node
+
+    file_imports = _extract_file_imports(root, import_types, source_bytes)
 
     chunks: list[Chunk] = []
 
@@ -222,6 +314,7 @@ def chunk_file(file_path: str) -> list[Chunk]:
             else:
                 node_type = "function"
 
+            parent_scope = _extract_parent_scope(node, class_types, source_bytes)
             chunk_id = f"{file_path}::{name}::{start_line}"
 
             chunks.append(
@@ -233,6 +326,8 @@ def chunk_file(file_path: str) -> list[Chunk]:
                     type=node_type,
                     name=name,
                     code=code,
+                    parent_name=parent_scope,
+                    imports=file_imports,
                 )
             )
 
@@ -243,6 +338,6 @@ def chunk_file(file_path: str) -> list[Chunk]:
 
     # Fall back if tree-sitter found no structural nodes
     if not chunks:
-        return _line_fallback_chunker(file_path, source)
+        return _line_fallback_chunker(file_path, source, imports=file_imports)
 
     return chunks

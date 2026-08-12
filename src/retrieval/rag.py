@@ -1,5 +1,7 @@
+import json
 import requests
 from src.schema import Chunk, RetrievalResult
+from src.indexing.chunker import format_chunk_with_context
 
 
 def retrieve_context(collection, query, n_results=3):
@@ -12,6 +14,12 @@ def retrieve_context(collection, query, n_results=3):
     for doc, meta, dist in zip(
         results["documents"][0], results["metadatas"][0], results["distances"][0]
     ):
+        raw_imports = meta.get("imports", "[]")
+        try:
+            parsed_imports = json.loads(raw_imports) if raw_imports else []
+        except Exception:
+            parsed_imports = []
+
         chunk = Chunk(
             id=f"{meta['file_path']}::{meta['name']}::{meta['start_line']}",
             file_path=meta["file_path"],
@@ -20,6 +28,8 @@ def retrieve_context(collection, query, n_results=3):
             type=meta["type"],
             name=meta["name"],
             code=doc,
+            parent_name=meta.get("parent_name") or None,
+            imports=parsed_imports,
         )
         retrieval_results.append(RetrievalResult(chunk=chunk, score=dist, query=query))
 
@@ -28,7 +38,7 @@ def retrieve_context(collection, query, n_results=3):
 
 def build_prompt(question, retrieval_results):
     context = "\n\n---\n\n".join(
-        f"File: {r.chunk.file_path}\n{r.chunk.code}" for r in retrieval_results
+        format_chunk_with_context(r.chunk) for r in retrieval_results
     )
     return f"""You are a code assistant. Use the following code context to answer the question.
 

@@ -67,5 +67,7 @@ desktop.ini
 # Evaluation outputs
 eval_report.json
 eval_report.csv
+synthetic_benchmark_dataset.json
+
 
 

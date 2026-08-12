@@ -364,6 +364,16 @@ class TestEvalRunner(unittest.TestCase):
         self.assertGreaterEqual(report.mean_context_recall, 0.0)
 
 
+from src.eval.synthetic_bug_generator import SyntheticDatasetGenerator
+
+
+class TestSyntheticBugGenerator(unittest.TestCase):
+    def test_synthetic_bug_generator(self):
+        generator = SyntheticDatasetGenerator()
+        pairs = generator.generate_pairs(target_count=10)
+        self.assertEqual(len(pairs), 10)
+
+
 class TestGraphPipeline(unittest.TestCase):
     @patch("src.agents.bug_detection.ollama.chat")
     def test_run_pipeline(self, mock_chat):
@@ -378,6 +388,7 @@ class TestGraphPipeline(unittest.TestCase):
             f.write(code)
             f.flush()
             res = run_pipeline(f.name)
+
 
         self.assertIn("agent_response", res)
         self.assertIn("review", res)

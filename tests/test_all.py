@@ -329,6 +329,30 @@ class TestSecurityAuditor(unittest.TestCase):
         self.assertEqual(scorecard["score"], 100)
 
 
+from src.agents.docstring_verifier import verify_function_docstring, audit_and_fix_docstring
+
+
+class TestDocstringVerifier(unittest.TestCase):
+    def test_verify_function_docstring_hallucination(self):
+        code = (
+            "def add(a: int, b: int) -> int:\n"
+            '    """Adds two numbers.\n\n'
+            "    Args:\n"
+            "        a (int): First.\n"
+            "        c (float): Hallucinated.\n"
+            '    """\n'
+            "    return a + b\n"
+        )
+        res = verify_function_docstring(code)
+        rep = res["details"]["report"]
+        self.assertEqual(rep["status"], "FAIL")
+
+    def test_audit_and_fix_docstring(self):
+        code = "def sub(x: int, y: int = 1) -> int:\n    pass\n"
+        res = audit_and_fix_docstring(code)
+        self.assertIn("corrected_docstring", res["details"])
+
+
 class TestGraphPipeline(unittest.TestCase):
     @patch("src.agents.bug_detection.ollama.chat")
     def test_run_pipeline(self, mock_chat):
@@ -351,4 +375,5 @@ class TestGraphPipeline(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 

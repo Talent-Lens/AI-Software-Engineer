@@ -1,4 +1,4 @@
-from indexing.indexer import index_repository, search
+from src.indexing.indexer import index_repository, search
 
-collection = index_repository("test_repo/src")
-search(collection, "Where is JWT implemented?")
+collection = index_repository("src")
+search(collection, "How does basic authentication work?")

@@ -1,20 +1,10 @@
 # src/schema.py
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-@dataclass
-class Chunk:
-    id: str
-    file_path: str
-    start_line: int
-    end_line: int
-    type: str
-    name: str
-    code: str
-    embedding: list[float] | None = None
-    
 from dataclasses import dataclass, field
+from pydantic import BaseModel
+from typing import Optional, Any
+
 
 @dataclass
 class Chunk:
@@ -22,10 +12,13 @@ class Chunk:
     file_path: str
     start_line: int
     end_line: int
-    type: str        # "function" | "class" | "method"
+    type: str  # "function" | "class" | "method" | "code_block"
     name: str
     code: str
+    parent_name: str | None = None
+    imports: list[str] = field(default_factory=list)
     embedding: list[float] | None = None
+
 
 @dataclass
 class RetrievalResult:
@@ -33,9 +26,9 @@ class RetrievalResult:
     score: float
     query: str
 
-@dataclass
-class AgentResponse:
+
+class AgentResponse(BaseModel):
     agent_name: str
     summary: str
-    details: dict
-    confidence: float | None = None
+    details: dict[str, Any]
+    confidence: Optional[float] = None

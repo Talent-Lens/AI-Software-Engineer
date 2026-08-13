@@ -1,0 +1,18 @@
+{
+  "include": [
+    ".",
+    "src",
+    "scripts",
+    "tests"
+  ],
+  "venvPath": ".",
+  "venv": "venv",
+  "extraPaths": [
+    ".",
+    "src"
+  ],
+  "exclude": [
+    "venv",
+    "test_repo"
+  ]
+}

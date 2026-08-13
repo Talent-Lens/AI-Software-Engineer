@@ -1,6 +1,6 @@
 """
 Docstring Generator Agent & Context Formatter — Production Enterprise Edition.
-Task: TASK-R6 (Docstring Generator Agent & Context Formatter)
+Task: TASK-R6 (Docstring Generator Agent & Context Formatter) & TASK-E5 (Docstring Accuracy Verifier)
 
 Inspects AST code chunks for missing documentation and generates language-specific
 docstrings (Google-style for Python, JSDoc for JS/TS, JavaDoc for Java, GoDoc for Go).
@@ -18,6 +18,12 @@ from typing import Any, Sequence
 import requests
 from src.indexing.chunker import chunk_file
 from src.schema import AgentResponse, Chunk
+
+try:
+    from src.agents.docstring_verifier import verify_file_docstrings, audit_and_fix_docstring
+except ImportError:
+    verify_file_docstrings = None
+    audit_and_fix_docstring = None
 
 logger = logging.getLogger("ai_engineer.agents.documentation")
 
@@ -50,25 +56,21 @@ def has_docstring(chunk: Chunk) -> bool:
     style = detect_docstring_style(chunk.file_path or "file.py")
 
     if style == "google":
-        # Python: check if lines after signature contain triple quotes (""" or ''')
         lines = [line.strip() for line in code.splitlines()]
         if len(lines) > 1:
             body_start = "\n".join(lines[1:])
             if body_start.startswith('"""') or body_start.startswith("'''"):
                 return True
-            # Also check if docstring is on same line or immediate next lines
             if '"""' in body_start[:100] or "'''" in body_start[:100]:
                 return True
         return False
 
     elif style in ("jsdoc", "javadoc"):
-        # JS/TS/Java: check if code or preceding comments contain /** ... */
         if code.startswith("/**") or "/**" in code[:150]:
             return True
         return False
 
     elif style == "godoc":
-        # Go: check if comment begins with // FunctionName
         func_name = chunk.name
         if code.startswith(f"// {func_name}") or f"// {func_name}" in code[:100]:
             return True
@@ -91,7 +93,6 @@ def identify_undocumented_chunks(chunks: Sequence[Chunk]) -> list[Chunk]:
 
     undocumented = list(func_method_chunks)
     for cls in class_chunks:
-        # Only add class chunk if none of its methods are being separately documented
         has_child = any(m.parent_name == cls.name for m in func_method_chunks)
         if not has_child:
             undocumented.append(cls)
@@ -113,7 +114,6 @@ def insert_docstring(code: str, docstring: str, style: str = "google", base_inde
     clean_docstr = docstring.strip()
 
     if style == "google":
-        # Find header definition line (e.g. def foo(): or class Bar:)
         def_idx = -1
         indent = " " * (base_indent + 4)
         for idx, line in enumerate(lines):
@@ -124,7 +124,6 @@ def insert_docstring(code: str, docstring: str, style: str = "google", base_inde
                 break
 
         if def_idx != -1 and def_idx < len(lines):
-            # Format docstring lines
             doc_lines = clean_docstr.splitlines()
             formatted_doc = []
             if not clean_docstr.startswith('"""'):
@@ -136,11 +135,9 @@ def insert_docstring(code: str, docstring: str, style: str = "google", base_inde
                 for d_line in doc_lines:
                     formatted_doc.append(f"{indent}{d_line}" if d_line else "")
 
-            # Insert docstrings right after definition header
             return "\n".join(lines[: def_idx + 1] + formatted_doc + lines[def_idx + 1 :])
 
     elif style in ("jsdoc", "javadoc"):
-        # Format JSDoc/JavaDoc above definition or first line
         leading_ws = len(lines[0]) - len(lines[0].lstrip())
         indent = " " * leading_ws
 
@@ -158,7 +155,6 @@ def insert_docstring(code: str, docstring: str, style: str = "google", base_inde
         return "\n".join(formatted_doc + lines)
 
     elif style == "godoc":
-        # GoDoc format above function definition
         leading_ws = len(lines[0]) - len(lines[0].lstrip())
         indent = " " * leading_ws
         doc_lines = clean_docstr.splitlines()
@@ -209,7 +205,6 @@ class DocstringAgent:
             elif callable(self.llm_client):
                 return self.llm_client(prompt)
 
-        # 1. Groq Cloud API
         if (self.provider in ("groq", "auto")) and self.groq_api_key:
             try:
                 headers = {
@@ -232,7 +227,6 @@ class DocstringAgent:
             except Exception as err:
                 logger.warning("Groq API call failed: %s. Falling back to Ollama.", err)
 
-        # 2. Ollama Local Endpoint Fallback
         try:
             resp = requests.post(
                 "http://localhost:11434/api/chat",
@@ -271,8 +265,6 @@ Instructions:
 3. Include parameter types, return descriptions, and any raised exceptions.
 """
         raw_response = self._call_llm(prompt)
-
-        # Clean markdown code fences if LLM included them
         clean_resp = re.sub(r"^```[a-zA-Z]*\n", "", raw_response.strip())
         clean_resp = re.sub(r"\n```$", "", clean_resp).strip()
         return clean_resp
@@ -309,15 +301,24 @@ Instructions:
                 docstr = self.generate_docstring_for_chunk(c, style=target_style)
                 doc_map[c.name] = docstr
 
+            details = {
+                "file_path": file_path,
+                "style": target_style,
+                "function_docs": doc_map,
+                "undocumented_count": len(target_chunks),
+            }
+
+            if verify_file_docstrings is not None:
+                try:
+                    v_res = verify_file_docstrings(file_path)
+                    details["accuracy_verification"] = v_res.get("details", {})
+                except Exception as ve:
+                    logger.debug("Docstring accuracy verification skipped: %s", ve)
+
             return AgentResponse(
                 agent_name="documentation_agent",
                 summary=f"Generated {len(doc_map)} {target_style.upper()} docstrings for '{file_path}'.",
-                details={
-                    "file_path": file_path,
-                    "style": target_style,
-                    "function_docs": doc_map,
-                    "undocumented_count": len(target_chunks),
-                },
+                details=details,
                 confidence=0.95,
             )
 
@@ -354,7 +355,6 @@ Instructions:
         target_style = detect_docstring_style(file_path)
         updated_code = source_code
 
-        # Sort chunks in reverse order by start_line to avoid offset shifting during replacement
         sorted_target = sorted(target_chunks, key=lambda c: c.start_line, reverse=True)
 
         for c in sorted_target:

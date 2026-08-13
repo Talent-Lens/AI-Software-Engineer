@@ -9,10 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-# Install essential system build tools
+# Install lightweight system tools (git & curl only)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
     git \
     curl \
     && rm -rf /var/lib/apt/lists/*

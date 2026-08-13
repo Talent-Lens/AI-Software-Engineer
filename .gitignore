@@ -35,3 +35,5 @@ Thumbs.db
 # Jupyter checkpoints (if you use notebooks at all)
 .ipynb_checkpoints/
 ai_software_engineer.egg-info/
+
+hard_negatives_store.json

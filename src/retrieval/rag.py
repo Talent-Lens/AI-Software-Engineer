@@ -2,9 +2,14 @@ import json
 import requests
 from src.schema import Chunk, RetrievalResult
 from src.indexing.chunker import format_chunk_with_context
+from src.retrieval.retriever import HybridRetriever
 
 
-def retrieve_context(collection, query, n_results=3):
+def retrieve_context(collection, query, n_results=3, hybrid=True, rerank=False):
+    if hybrid:
+        retriever = HybridRetriever(collection=collection)
+        return retriever.retrieve(query=query, top_k=n_results, rerank=rerank)
+
     results = collection.query(query_texts=[query], n_results=n_results)
 
     retrieval_results = []

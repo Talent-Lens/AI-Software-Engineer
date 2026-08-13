@@ -17,3 +17,8 @@ extraPaths = [".", "src"]
 executionEnvironments = [
   { root = "." }
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as slow integration tests",
+]

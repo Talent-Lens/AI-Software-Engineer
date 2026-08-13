@@ -41,12 +41,12 @@ This project builds an **Enterprise-Grade AI Software Engineer System** that ind
 | **TASK-E7** | Synthetic Bug Generator | **You** | Auto-generate 100+ benchmark test cases with golden ground truths. |
 | **TASK-E8** | Dynamic Multi-Model Router | **You** | Dynamically route queries between fast models & deep reasoning models (DeepSeek-R1). |
 | **TASK-E9** | Human-in-the-Loop Hard Negative Store | **You** | Save user accept/reject feedback into ChromaDB hard-negatives to improve retrieval. |
-| **TASK-FS1**| FastAPI Backend & WebSockets | **Joint** | Build REST endpoints and WebSocket stream for agent execution logs. |
-| **TASK-FS2**| React Web Frontend | **Joint** | Live LangGraph Canvas, Monaco Code Editor, Diff Viewer, Eval Dashboard. |
-| **TASK-FS3**| Docker & Cloud Deployment | **Joint** | Dockerize setup and deploy to free tiers (Vercel + Render/Railway). |
-| **TASK-FS4**| GitHub PR Webhook & GitHub Action | **Joint** | Auto-comment AI reviews directly on real GitHub Pull Requests. |
-| **TASK-FS5**| OpenTelemetry & Agent Tracing | **Joint** | Trace latency breakdown and token usage with Arize Phoenix telemetry. |
-| **TASK-FS6**| Supabase / Postgres Database (SQLAlchemy)| **Joint** | Persist repos, analysis runs, evaluation trends, and feedback audit logs. |
+| **TASK-FS1**| FastAPI Backend & WebSockets | **Friend** | Build REST endpoints (`/api/v1/analyze`) and WebSocket streams (`/ws/graph-stream`). |
+| **TASK-FS2**| React Web Frontend | **You** | Live LangGraph Canvas, Monaco Code Editor, Diff Viewer, Eval Dashboard. |
+| **TASK-FS3**| Docker & Cloud Deployment | **Friend** | Dockerize setup and deploy to free tiers (Vercel + Render/Railway). |
+| **TASK-FS4**| GitHub PR Webhook & GitHub Action | **You** | Auto-comment AI reviews directly on real GitHub Pull Requests. |
+| **TASK-FS5**| OpenTelemetry & Agent Tracing | **You** | Trace latency breakdown and token usage with Arize Phoenix telemetry. |
+| **TASK-FS6**| Supabase / Postgres Database (SQLAlchemy)| **Friend** | Persist repos, analysis runs, evaluation trends, and feedback audit logs. |
 
 ---
 
@@ -150,29 +150,29 @@ This project builds an **Enterprise-Grade AI Software Engineer System** that ind
 
 # 🌐 PART 3: SHARED ROADMAP (Full-Stack Web App & Deployment)
 
-### 🔹🔸 TASK-FS1: FastAPI Backend & WebSockets Stream Engine
+### 🔹 TASK-FS1: FastAPI Backend & WebSockets Stream Engine [Owner: Friend]
 - Create REST endpoints: `/api/v1/analyze`, `/api/v1/retrieval/search`, `/api/v1/eval/run`.
 - Add WebSocket endpoint (`/ws/graph-stream`) to stream live LangGraph execution logs to the frontend.
 
-### 🔹🔸 TASK-FS2: React Web Frontend (VS-Code & Dashboard Style)
+### 🔸 TASK-FS2: React Web Frontend (VS-Code & Dashboard Style) [Owner: You]
 - **Live LangGraph Canvas:** Interactive visual graph where nodes light up live as agents run.
 - **Monaco Code Editor & Diff Viewer:** Show source code and proposed fixes side-by-side like GitHub PRs.
 - **Recharts Evaluation Dashboard:** Visual graphs showing RAG Triad scores, Hits@K, and Latency.
 
-### 🔹🔸 TASK-FS3: Docker & Cloud Deployment
+### 🔹 TASK-FS3: Docker & Cloud Deployment [Owner: Friend]
 - Create `Dockerfile` and `docker-compose.yml` for backend, vector DB, and frontend.
 - Deploy frontend to Vercel and backend to Render / Railway / Hugging Face Spaces (100% Free).
 - Put live link + 15-second demo video on GitHub `README.md`.
 
-### 🔹🔸 TASK-FS4: GitHub PR Webhook & GitHub Action
+### 🔸 TASK-FS4: GitHub PR Webhook & GitHub Action [Owner: You]
 - **Implementation:** Build `/api/v1/github/webhook` listening to GitHub Pull Request events. Write a GitHub Action workflow file (`.github/workflows/ai-review.yml`).
 - **Goal:** Post automated AI review comments directly onto real GitHub PRs!
 
-### 🔹🔸 TASK-FS5: OpenTelemetry & Agent Tracing (Arize Phoenix)
+### 🔸 TASK-FS5: OpenTelemetry & Agent Tracing (Arize Phoenix) [Owner: You]
 - **Implementation:** Instrument FastAPI & LangGraph with `arize-phoenix` / `openinference` tracing.
 - **Goal:** Provide a live telemetry dashboard for latency breakdowns and token usage.
 
-### 🔹🔸 TASK-FS6: Enterprise Database & Analytics Persistence (Supabase / Postgres + SQLAlchemy)
+### 🔹 TASK-FS6: Enterprise Database & Analytics Persistence (Supabase / Postgres + SQLAlchemy) [Owner: Friend]
 - **Implementation:** Build database models using `SQLAlchemy` for `repositories`, `analysis_runs`, `eval_experiments`, and `user_feedback`. Connect to free Supabase PostgreSQL instance.
 - **Goal:** Persist historical evaluation trends, codebase metadata, and audit logs.
 

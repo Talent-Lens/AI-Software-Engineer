@@ -18,8 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy requirements file first for layer caching
 COPY requirements.txt .
 
-# Install CPU-only PyTorch (~140MB instead of 1.5GB CUDA GPU download)
-RUN pip install --no-cache-dir torch --extra-index-url https://download.pytorch.org/whl/cpu
+# Upgrade pip to latest version for improved network resilience & retry handling
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install CPU-only PyTorch (~140MB) with extended socket timeout (1000s)
+RUN pip install --no-cache-dir --default-timeout=1000 torch --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Install remaining Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt

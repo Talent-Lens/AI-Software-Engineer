@@ -2,13 +2,31 @@ import json
 import requests
 from src.schema import Chunk, RetrievalResult
 from src.indexing.chunker import format_chunk_with_context
+from src.retrieval.graph_rag import GraphRetriever
 from src.retrieval.retriever import HybridRetriever
 
 
-def retrieve_context(collection, query, n_results=3, hybrid=True, rerank=False):
+def retrieve_context(
+    collection,
+    query,
+    n_results=3,
+    hybrid=True,
+    rerank=False,
+    use_graph=False,
+    max_hops=1,
+):
     if hybrid:
-        retriever = HybridRetriever(collection=collection)
-        return retriever.retrieve(query=query, top_k=n_results, rerank=rerank)
+        hybrid_retriever = HybridRetriever(collection=collection)
+        if use_graph:
+            graph_retriever = GraphRetriever(hybrid_retriever=hybrid_retriever)
+            return graph_retriever.retrieve(
+                query=query,
+                top_k=n_results,
+                enable_graph_expansion=True,
+                max_hops=max_hops,
+                rerank=rerank,
+            )
+        return hybrid_retriever.retrieve(query=query, top_k=n_results, rerank=rerank)
 
     results = collection.query(query_texts=[query], n_results=n_results)
 

@@ -3,8 +3,10 @@ title: AI Software Engineer Platform API
 emoji: 🚀
 colorFrom: blue
 colorTo: purple
-sdk: docker
-app_port: 8000
+sdk: gradio
+sdk_version: 4.44.0
+app_file: app.py
+pinned: false
 ---
 
 # Enterprise AI Software Engineer Platform
@@ -12,11 +14,13 @@ app_port: 8000
 Multi-Language AST Chunker, Parent-Child Windowing, Hybrid Search Engine (Vector + BM25 + Cross-Encoder Re-Ranker), SAST Security Auditor, Self-Executing Unit Test Sandbox, RAG Triad Evaluation Suite, and FastAPI Backend Server.
 
 ## 🚀 Live API Docs
-Swagger UI documentation: `/docs`
-ReDoc UI documentation: `/redoc`
+- Interactive Swagger UI: `/docs`
+- Interactive ReDoc UI: `/redoc`
+- Health Check Endpoint: `/api/v1/health`
 
 ## 🛠️ Tech Stack
 - **FastAPI** & **Uvicorn**
+- **Gradio SDK** (Hugging Face Free CPU Space)
 - **ChromaDB** & **SentenceTransformers**
 - **Tree-sitter** Multi-Language Parser
 - **LangGraph** & **LangChain** Agent Framework

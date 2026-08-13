@@ -1,0 +1,35 @@
+# Git & Version Control
+.git
+.gitignore
+
+# Virtual Environments
+venv/
+env/
+ENV/
+
+# Python Cache & Compiled Files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project Temp & Log Files
+*.log
+scratch/
+eval_report.json
+eval_report.csv
+
+# Frontend Node modules & builds (for when frontend is added)
+node_modules/
+dist/
+build/

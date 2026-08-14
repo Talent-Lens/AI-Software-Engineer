@@ -1,6 +1,9 @@
 import { EvalReport, UserFeedbackRequest } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+const API_BASE_URL = rawBaseUrl
+  ? (rawBaseUrl.startsWith('http://') || rawBaseUrl.startsWith('https://') ? rawBaseUrl : `https://${rawBaseUrl}`)
+  : '';
 
 export async function fetchHealthStatus(): Promise<{ status: string; version: string; ok: boolean }> {
   try {

@@ -32,13 +32,11 @@ services:
         value: http://localhost:11434
 
   # -----------------------------------------------------------
-  # 2. React + Vite Frontend Static Site
+  # 2. React + Vite Frontend Static Site (Global CDN)
   # -----------------------------------------------------------
   - type: web
     name: ai-software-engineer-frontend
     runtime: static
-    region: oregon
-    plan: free
     rootDir: frontend
     buildCommand: "npm install && npm run build"
     staticPublishPath: dist

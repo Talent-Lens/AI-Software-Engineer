@@ -46,7 +46,7 @@ app.include_router(agents.router, prefix="/api/v1")
 app.include_router(feedback.router, prefix="/api/v1")
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     return {
         "name": "AI Software Engineer Platform API",

@@ -1,16 +1,36 @@
 """
-FastAPI Server Core Application (TASK-FS1)
+FastAPI Server Core Application (TASK-FS1 & TASK-FS6)
 """
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routers import health, analyze, retrieval, eval as eval_router, agents, feedback
+from src.api.routers import health, analyze, retrieval, eval as eval_router, agents, feedback, analytics, github, telemetry
 from src.api.websockets import manager, stream_pipeline_execution
+from src.db.session import init_db
+from src.telemetry.middleware import TelemetryMiddleware
 
 logger = logging.getLogger("ai_engineer.api.server")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application startup and shutdown lifespan handler.
+    Initializes database tables on boot.
+    """
+    logger.info("Starting AI Software Engineer API Server...")
+    try:
+        init_db()
+        logger.info("Database schema verified and initialized.")
+    except Exception as err:
+        logger.error("Database initialization warning: %s", err)
+    yield
+    logger.info("Shutting down AI Software Engineer API Server...")
+
 
 app = FastAPI(
     title="AI Software Engineer Platform API",
@@ -18,6 +38,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # CORS Middleware Setup
@@ -36,6 +57,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(TelemetryMiddleware)
 
 # Include REST Routers under /api/v1
 app.include_router(health.router, prefix="/api/v1")
@@ -44,6 +66,9 @@ app.include_router(retrieval.router, prefix="/api/v1")
 app.include_router(eval_router.router, prefix="/api/v1")
 app.include_router(agents.router, prefix="/api/v1")
 app.include_router(feedback.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(github.router, prefix="/api/v1")
+app.include_router(telemetry.router, prefix="/api/v1")
 
 
 @app.api_route("/", methods=["GET", "HEAD"])

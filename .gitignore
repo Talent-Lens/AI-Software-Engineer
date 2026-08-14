@@ -3,6 +3,13 @@ venv/
 .venv/
 env/
 ENV/
+
+# Node.js & React Frontend
+node_modules/
+**/node_modules/
+frontend/dist/
+frontend/.vite/
+
 .env/
 # Python cache & bytecode
 __pycache__/

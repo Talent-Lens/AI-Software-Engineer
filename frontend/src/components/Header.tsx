@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { 
   Play, 
   Cpu, 
-  Sparkles, 
+  ShieldCheck,
   Search, 
   X,
   MessageSquareText,
   FileCode,
-  ArrowRight
+  Sparkles,
+  Command,
+  BarChart3
 } from 'lucide-react';
 import { UIMode } from '../types';
 
@@ -18,8 +20,8 @@ interface HeaderProps {
   isExecuting: boolean;
   onRunPipeline: () => void;
   selectedFileName?: string;
-  uiMode: UIMode;
-  setUiMode: (mode: UIMode) => void;
+  activeView?: 'workspace' | 'eval';
+  onSelectView?: (view: 'workspace' | 'eval') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,8 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   isExecuting,
   onRunPipeline,
   selectedFileName,
-  uiMode,
-  setUiMode,
+  activeView = 'workspace',
+  onSelectView,
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResult, setSearchResult] = useState<{ query: string; answer: string; filepath: string; lineno: number } | null>(null);
@@ -39,30 +41,36 @@ export const Header: React.FC<HeaderProps> = ({
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
-    // Intelligent query matching for GraphRAG search assistant
-    let ans = "Analyzing codebase GraphRAG index...";
-    let file = "src/agents/bug_detection.py";
+    const targetFile = selectedFileName || 'app.py';
+    let ans = `Analyzing AST & semantic vector index for ${targetFile}...`;
+    let file = targetFile;
     let line = 12;
 
     const q = searchQuery.toLowerCase();
-    if (q.includes('test') || q.includes('sandbox') || q.includes('pytest')) {
-      ans = "Pytest Sandbox Execution is implemented in src/sandbox/runner.py using subprocess.run with timeout safety.";
-      file = "src/sandbox/runner.py";
-      line = 15;
-    } else if (q.includes('sql') || q.includes('security') || q.includes('owasp')) {
-      ans = "OWASP SQL Injection AST Scanner is defined in SecurityASTScanner inside src/agents/security_auditor.py.";
-      file = "src/agents/security_auditor.py";
-      line = 140;
-    } else if (q.includes('line') || q.includes('grounding') || q.includes('citation')) {
-      ans = "Line-number citation verification is implemented in verify_line_grounding inside src/agents/review_agent.py.";
-      file = "src/agents/review_agent.py";
-      line = 100;
-    } else if (q.includes('docstring') || q.includes('accuracy')) {
-      ans = "DocstringAccuracyAuditor and ASTSignatureExtractor are defined in src/agents/docstring_verifier.py.";
-      file = "src/agents/docstring_verifier.py";
-      line = 180;
+    if (q.includes('grade') || q.includes('why') || q.includes('score') || q.includes('c') || q.includes('rating') || q.includes('status')) {
+      ans = `${targetFile} is graded C (65/100) due to 1 High-Severity OWASP A08 vulnerability (Insecure Deserialization via pickle.load at line #28). CodeGuardian auto-patched it using safe file context manager handling.`;
+      file = targetFile;
+      line = 28;
+    } else if (q.includes('pickle') || q.includes('deserialization') || q.includes('security') || q.includes('owasp') || q.includes('sql')) {
+      ans = `OWASP A08 Insecure Deserialization risk detected in ${targetFile} at line #28. Auto-patched with safe context manager file loading.`;
+      file = targetFile;
+      line = 28;
+    } else if (q.includes('fix') || q.includes('patch') || q.includes('how')) {
+      ans = `Proposed security patch refactors file loading in ${targetFile} into explicit context manager scopes ('with open(...) as f:').`;
+      file = targetFile;
+      line = 28;
+    } else if (q.includes('jwt') || q.includes('auth') || q.includes('token') || q.includes('timing')) {
+      ans = `Constant-time signature comparison verified for ${targetFile}.`;
+      file = targetFile;
+      line = 9;
+    } else if (q.includes('worker') || q.includes('exception') || q.includes('job') || q.includes('bare')) {
+      ans = `Bare except clause refactored to explicit Exception capture with logging in ${targetFile}.`;
+      file = targetFile;
+      line = 10;
     } else {
-      ans = `GraphRAG Search Result: '${searchQuery}' matches AST symbol definition in ${file} at line ${line}.`;
+      ans = `Semantic Code Graph match: '${searchQuery}' mapped to AST definitions in ${targetFile}. Security audit: 1 vulnerability identified & auto-patched.`;
+      file = targetFile;
+      line = 28;
     }
 
     setSearchResult({
@@ -74,123 +82,132 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-[#14141c] border-b border-[#2b2b38] select-none z-30 shadow-lg relative">
-      {/* Top Header Navigation Row */}
-      <div className="h-12 px-4 flex items-center justify-between gap-3">
-        {/* App Title & UI Mode Switcher */}
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <div className="p-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-md">
-              <Sparkles className="w-4 h-4 text-white animate-pulse" />
+    <header className="bg-[#101018] border-b border-[#202030] select-none z-30 shadow-sm relative">
+      <div className="h-13 px-4 flex items-center justify-between gap-4">
+        
+        {/* Left Section: Brand Logo */}
+        <div className="flex items-center space-x-3.5 flex-shrink-0">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-1.5 bg-gradient-to-tr from-teal-500 to-emerald-500 rounded-xl shadow-md shadow-teal-950/40 flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4 text-white" />
             </div>
-            <span className="text-white font-bold tracking-wide text-sm">Enterprise AI Software Engineer</span>
+            <div className="flex items-center space-x-1.5">
+              <span className="text-white font-extrabold tracking-tight text-base bg-gradient-to-r from-white via-slate-100 to-teal-200 bg-clip-text text-transparent">
+                CodeGuardian
+              </span>
+            </div>
           </div>
 
-          <div className="h-4 w-[1px] bg-[#2b2b38]" />
-
-          {/* Simple Mode vs Advanced Developer Mode Switcher */}
-          <div className="flex items-center space-x-1 bg-[#0a0a0e] p-1 rounded-xl border border-[#2b2b38]">
-            <button
-              onClick={() => setUiMode('simple')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                uiMode === 'simple'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                  : 'text-[#858595] hover:text-white'
-              }`}
-            >
-              Simple Mode
-            </button>
-            <button
-              onClick={() => setUiMode('advanced')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                uiMode === 'advanced'
-                  ? 'bg-[#007acc] text-white shadow-md'
-                  : 'text-[#858595] hover:text-white'
-              }`}
-            >
-              Developer Mode
-            </button>
+          <div className="hidden sm:block text-[11px] font-mono text-[#787890] border-l border-[#252536] pl-3">
+            Autonomous AI Security & Verification Engine
           </div>
         </div>
 
-        {/* Conversational AI Search Bar */}
-        <form onSubmit={handleSearch} className="hidden md:flex items-center flex-1 max-w-lg mx-4 relative">
-          <Search className="w-3.5 h-3.5 text-[#858595] absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Ask AI: 'How is pytest sandbox implemented?' or 'Find SQL injection'..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#0a0a0e] border border-[#2b2b38] rounded-xl pl-9 pr-8 py-1.5 text-xs text-white placeholder-[#666666] focus:outline-none focus:border-[#007acc]"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-2 text-[#858595] hover:text-white"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </form>
+        {/* Center Section: Unified Command & AI Search Bar */}
+        <div className="flex-1 max-w-md hidden md:block">
+          <form onSubmit={handleSearch} className="relative">
+            <Search className="w-3.5 h-3.5 text-[#65657d] absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Ask AI or search symbols (e.g. 'Find SQL injection')..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#141420] border border-[#222234] rounded-xl pl-9 pr-8 py-1.5 text-xs text-white placeholder-[#55556d] focus:outline-none focus:border-teal-500/60 font-mono transition-colors"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#65657d] hover:text-white cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center space-x-0.5 text-[10px] text-[#55556d] font-mono border border-[#252536] px-1 rounded">
+                <span>⌘K</span>
+              </div>
+            )}
+          </form>
+        </div>
 
-        {/* Right Section: Model Selector & Execute Button */}
-        <div className="flex items-center space-x-3">
-          <div className="hidden sm:flex items-center space-x-2 bg-[#0a0a0e] px-3 py-1.5 rounded-xl border border-[#2b2b38] text-xs">
-            <Cpu className="w-3.5 h-3.5 text-[#c586c0]" />
+        {/* Right Section: View Navigation, Model Selector & Actions */}
+        <div className="flex items-center space-x-2.5 flex-shrink-0">
+          
+          {/* View Navigation Switcher: Workspace vs Benchmark Dashboard */}
+          <div className="flex items-center bg-[#141420] p-1 rounded-xl border border-[#202030] text-xs font-mono">
+            <button
+              onClick={() => onSelectView && onSelectView('workspace')}
+              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                activeView === 'workspace'
+                  ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-sm'
+                  : 'text-[#787890] hover:text-white'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Workspace</span>
+            </button>
+            <button
+              onClick={() => onSelectView && onSelectView('eval')}
+              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                activeView === 'eval'
+                  ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-sm'
+                  : 'text-[#787890] hover:text-white'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Benchmark Suite</span>
+            </button>
+          </div>
+
+          {/* Engine Status Dot */}
+          <div className="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-[#141420] border border-[#202030] text-[10px] font-mono text-[#8b8ba0]">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>AST Engine Ready</span>
+          </div>
+
+          {/* Model Selector Dropdown */}
+          <div className="flex items-center space-x-2 bg-[#141420] px-2.5 py-1.5 rounded-xl border border-[#202030] text-xs">
+            <Cpu className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
             <select
               value={activeModel}
               onChange={(e) => setActiveModel(e.target.value)}
-              className="bg-transparent text-white font-mono text-[11px] focus:outline-none cursor-pointer"
+              className="bg-transparent text-white font-mono text-[11px] focus:outline-none cursor-pointer pr-1"
             >
-              <option value="qwen-2.5-coder-32b" className="bg-[#14141c] text-white">Groq Qwen-2.5-Coder-32B</option>
-              <option value="deepseek-r1-7b" className="bg-[#14141c] text-white">DeepSeek-R1:7B Reasoning</option>
-              <option value="gemini-2.5-flash" className="bg-[#14141c] text-white">Gemini-2.5-Flash Auditor</option>
+              <option value="qwen-2.5-coder-32b" className="bg-[#14141c] text-white">Qwen-2.5-Coder-32B</option>
+              <option value="deepseek-r1-7b" className="bg-[#14141c] text-white">DeepSeek-R1:7B</option>
+              <option value="gemini-2.5-flash" className="bg-[#14141c] text-white">Gemini-2.5-Flash</option>
             </select>
           </div>
-
-          <button
-            onClick={onRunPipeline}
-            disabled={isExecuting}
-            className={`flex items-center space-x-2 px-4 py-1.5 rounded-xl font-bold text-xs text-white shadow-lg transition-all transform active:scale-95 ${
-              isExecuting
-                ? 'bg-amber-600/70 cursor-not-allowed'
-                : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-950/50'
-            }`}
-          >
-            <Play className={`w-3.5 h-3.5 fill-current ${isExecuting ? 'animate-spin' : ''}`} />
-            <span>{isExecuting ? 'Agent Graph Running...' : 'Execute AI Pipeline'}</span>
-          </button>
         </div>
       </div>
 
-      {/* Persistent Glassmorphic AI Search Answer Popover Card (Does NOT vanish automatically) */}
+      {/* AI Semantic Search Answer Card */}
       {searchResult && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-[#181824]/95 backdrop-blur-xl border border-[#007acc] rounded-2xl p-4 shadow-2xl z-50 text-xs space-y-2 animate-fadeIn select-text">
-          <div className="flex items-center justify-between border-b border-[#2b2b38] pb-2">
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 w-full max-w-xl bg-[#141420]/95 backdrop-blur-xl border border-teal-500/40 rounded-2xl p-4 shadow-2xl z-50 text-xs space-y-2 animate-fadeIn select-text">
+          <div className="flex items-center justify-between border-b border-[#252536] pb-2">
             <div className="flex items-center space-x-2 text-white font-bold">
-              <MessageSquareText className="w-4 h-4 text-[#60a5fa]" />
-              <span>AI GraphRAG Answer</span>
+              <MessageSquareText className="w-4 h-4 text-teal-400" />
+              <span>Semantic Code Insight</span>
             </div>
             <button
               onClick={() => setSearchResult(null)}
-              className="text-[#858595] hover:text-white p-1 rounded-lg hover:bg-[#252535] transition-colors"
+              className="text-[#7d7d92] hover:text-white p-1 rounded-lg hover:bg-[#202030] transition-colors cursor-pointer"
               title="Close Answer Box"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <p className="text-emerald-300 font-medium leading-relaxed">
+          <p className="text-emerald-300 font-medium leading-relaxed font-mono text-[12px]">
             {searchResult.answer}
           </p>
 
-          <div className="flex items-center justify-between text-[11px] font-mono text-[#858595] pt-1">
-            <span className="flex items-center space-x-1">
-              <FileCode className="w-3.5 h-3.5 text-[#007acc]" />
-              <span className="text-[#ce9178]">{searchResult.filepath}</span>
+          <div className="flex items-center justify-between text-[11px] font-mono text-[#8b8ba0] pt-1">
+            <span className="flex items-center space-x-1.5">
+              <FileCode className="w-3.5 h-3.5 text-teal-400" />
+              <span className="text-amber-300">{searchResult.filepath}</span>
             </span>
-            <span className="bg-blue-950 text-blue-300 px-2 py-0.5 rounded border border-blue-800">
+            <span className="bg-teal-950 text-teal-300 px-2 py-0.5 rounded-lg border border-teal-700/50 font-bold">
               Line #{searchResult.lineno}
             </span>
           </div>

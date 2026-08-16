@@ -25,26 +25,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const tabs = [
     {
-      id: 'explorer' as ActiveTab,
-      label: 'Explorer & AST Files',
-      icon: Files,
-      badge: null,
+      id: 'diff' as ActiveTab,
+      label: 'Code & AST Workbench',
+      icon: GitCompare,
+      badge: 'Interactive Diff',
     },
     {
       id: 'langgraph' as ActiveTab,
-      label: 'Live LangGraph Canvas',
+      label: 'LangGraph Multi-Agent Canvas',
       icon: GitFork,
-      badge: `${nodeCount} Nodes`,
-    },
-    {
-      id: 'diff' as ActiveTab,
-      label: 'Monaco Diff & Fix Viewer',
-      icon: GitCompare,
-      badge: 'PR View',
+      badge: `${nodeCount} Agents`,
     },
     {
       id: 'eval' as ActiveTab,
-      label: 'Recharts Evaluation Suite',
+      label: 'RAG Triad & Eval Suite',
       icon: BarChart3,
       badge: `${evalCount} Benchmarks`,
     },
@@ -57,9 +51,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-14 bg-[#333333] border-r border-[#3c3c3c] flex flex-col justify-between items-center py-2 select-none z-10">
+    <aside className="w-14 bg-[#0e0e15] border-r border-[#252536] flex flex-col justify-between items-center py-3 select-none z-10">
       {/* Top Activity Bar Navigation */}
-      <div className="flex flex-col items-center space-y-2 w-full">
+      <div className="flex flex-col items-center space-y-2.5 w-full">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -68,19 +62,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               title={tab.label}
-              className={`relative group w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-150 ${
+              className={`relative group w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
                 isActive
-                  ? 'bg-[#252526] text-[#007acc] border-l-2 border-[#007acc]'
-                  : 'text-[#858585] hover:text-white hover:bg-[#2a2d2e]'
+                  ? 'bg-teal-950/70 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/50 ring-1 ring-teal-500/30'
+                  : 'text-[#787890] hover:text-white hover:bg-[#181824]'
               }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'text-[#007acc]' : ''}`} />
+              <Icon className={`w-5 h-5 ${isActive ? 'text-teal-300' : ''}`} />
               
               {/* Tooltip on hover */}
-              <div className="absolute left-14 bg-[#252526] text-white text-[11px] px-2.5 py-1 rounded border border-[#3c3c3c] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-lg z-50">
+              <div className="absolute left-14 bg-[#14141d] text-white text-[11px] px-3 py-1.5 rounded-xl border border-[#252536] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-2xl z-50 font-mono">
                 {tab.label}
                 {tab.badge && (
-                  <span className="ml-2 bg-[#007acc]/30 text-[#60a5fa] px-1.5 py-0.5 rounded text-[10px] font-mono">
+                  <span className="ml-2 bg-teal-500/20 text-teal-300 border border-teal-500/30 px-1.5 py-0.5 rounded text-[10px] font-mono">
                     {tab.badge}
                   </span>
                 )}
@@ -91,14 +85,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Bottom Status / Guardrail Badge */}
-      <div className="flex flex-col items-center space-y-3 pb-2">
+      <div className="flex flex-col items-center space-y-3 pb-1">
         <div className="group relative">
-          <div className="w-9 h-9 rounded-full bg-emerald-950/60 border border-emerald-700/60 flex items-center justify-center text-emerald-400 cursor-pointer">
+          <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 cursor-pointer shadow-md">
             <ShieldCheck className="w-4 h-4" />
           </div>
-          <div className="absolute left-14 bottom-0 bg-[#252526] text-white text-[11px] px-2.5 py-1 rounded border border-[#3c3c3c] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-lg z-50">
-            <div className="font-semibold text-emerald-400">AST Line & SAST Guardrail</div>
-            <div className="text-[10px] text-[#858585]">100% Syntax & Citation Grounding</div>
+          <div className="absolute left-14 bottom-0 bg-[#14141d] text-white text-[11px] px-3 py-2 rounded-xl border border-[#252536] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-2xl z-50 font-mono">
+            <div className="font-bold text-teal-300">CodeGuardian Guardrail</div>
+            <div className="text-[10px] text-[#787890]">Tree-Sitter AST & SAST Active</div>
           </div>
         </div>
       </div>

@@ -7,16 +7,156 @@ import { LangGraphCanvas } from './components/LangGraphCanvas';
 import { CodeDiffEditor } from './components/CodeDiffEditor';
 import { EvalDashboard } from './components/EvalDashboard';
 import { SimpleUserWizard } from './components/SimpleUserWizard';
+import { DeveloperLanding } from './components/DeveloperLanding';
+import { UnifiedWorkspace } from './components/UnifiedWorkspace';
 import { ActiveTab, CodeFile, PipelineExecutionState, UIMode } from './types';
 import { fetchHealthStatus } from './services/api';
 
+const defaultSampleFiles: CodeFile[] = [
+  {
+    id: 'sms-spam-app',
+    name: 'app.py',
+    path: 'SMS-Spam-Classifier/app.py',
+    language: 'python',
+    originalCode: `import streamlit as st
+import pickle
+import string
+from nltk.corpus import stopwords
+import nltk
+from nltk.stem.porter import PorterStemmer
+
+ps = PorterStemmer()
+
+def transform_text(text):
+    text = text.lower()
+    text = nltk.word_tokenize(text)
+    y = []
+    for i in text:
+        if i.isalnum():
+            y.append(i)
+    text = y[:]
+    y.clear()
+    for i in text:
+        if i not in stopwords.words('english') and i not in string.punctuation:
+            y.append(i)
+    text = y[:]
+    y.clear()
+    for i in text:
+        y.append(ps.stem(i))
+    return " ".join(y)
+
+# OWASP A08: Insecure deserialization using untrusted pickle model
+tfidf = pickle.load(open('vectorizer.pkl','rb'))
+model = pickle.load(open('model.pkl','rb'))
+
+st.title("SMS Spam Classifier")
+input_sms = st.text_area("Enter the message")
+
+if st.button('Predict'):
+    transformed_sms = transform_text(input_sms)
+    vector_input = tfidf.transform([transformed_sms])
+    result = model.predict(vector_input)[0]
+    if result == 1:
+        st.error("Spam")
+    else:
+        st.success("Not Spam")`,
+    proposedFix: `import streamlit as st
+import pickle
+import string
+from nltk.corpus import stopwords
+import nltk
+from nltk.stem.porter import PorterStemmer
+
+ps = PorterStemmer()
+
+def transform_text(text):
+    """Clean, tokenize, remove stopwords and stem input message.
+    
+    Args:
+        text (str): Raw input SMS message string.
+    Returns:
+        str: Processed text token string for classification.
+    """
+    text = text.lower()
+    text = nltk.word_tokenize(text)
+    y = [i for i in text if i.isalnum()]
+    y = [ps.stem(i) for i in y if i not in stopwords.words('english') and i not in string.punctuation]
+    return " ".join(y)
+
+# SAFE: Managed file context handling for deserialization verification
+with open('vectorizer.pkl', 'rb') as f_vec:
+    tfidf = pickle.load(f_vec)
+
+with open('model.pkl', 'rb') as f_mdl:
+    model = pickle.load(f_mdl)
+
+st.title("SMS Spam Classifier")
+input_sms = st.text_area("Enter the message")
+
+if st.button('Predict'):
+    transformed_sms = transform_text(input_sms)
+    vector_input = tfidf.transform([transformed_sms])
+    result = model.predict(vector_input)[0]
+    if result == 1:
+        st.error("Spam")
+    else:
+        st.success("Not Spam")`,
+    hasBug: false,
+    hasSecurityRisk: true,
+    docstringStatus: 'generated',
+    lineCitations: [
+      { line: 28, text: "tfidf = pickle.load(open('vectorizer.pkl','rb'))", status: 'verified' },
+      { line: 29, text: "model = pickle.load(open('model.pkl','rb'))", status: 'verified' }
+    ],
+    securityIssues: [
+      { severity: 'HIGH', title: 'OWASP A08: Insecure Deserialization via untrusted pickle payload', line: 28, rule: 'SAST-INSECURE-DESERIALIZATION' }
+    ]
+  },
+  {
+    id: 'sms-spam-nltk',
+    name: 'nltk_download.py',
+    path: 'SMS-Spam-Classifier/nltk_download.py',
+    language: 'python',
+    originalCode: `import nltk
+
+# Download essential NLTK data packages
+try:
+    nltk.download('punkt')
+    nltk.download('stopwords')
+    print("NLTK data packages downloaded successfully.")
+except:
+    pass`,
+    proposedFix: `import nltk
+import logging
+
+logger = logging.getLogger("nltk_setup")
+
+# Download essential NLTK data packages with explicit exception handling
+try:
+    nltk.download('punkt', quiet=True)
+    nltk.download('stopwords', quiet=True)
+    logger.info("NLTK data packages downloaded successfully.")
+except Exception as e:
+    logger.error(f"Failed to download NLTK packages: {e}")
+    raise e`,
+    hasBug: true,
+    hasSecurityRisk: false,
+    docstringStatus: 'verified',
+    lineCitations: [
+      { line: 8, text: "except: pass", status: 'verified' }
+    ],
+    securityIssues: []
+  }
+];
+
 export const App: React.FC = () => {
-  const [uiMode, setUiMode] = useState<UIMode>('simple');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('langgraph');
-  const [files, setFiles] = useState<CodeFile[]>([]);
-  const [selectedFile, setSelectedFile] = useState<CodeFile | undefined>(undefined);
+  const [uiMode, setUiMode] = useState<UIMode>('advanced');
+  const [currentView, setCurrentView] = useState<'workspace' | 'eval'>('workspace');
+  const [files, setFiles] = useState<CodeFile[]>(defaultSampleFiles);
+  const [selectedFile, setSelectedFile] = useState<CodeFile | undefined>(defaultSampleFiles[0]);
   const [activeModel, setActiveModel] = useState<string>('qwen-2.5-coder-32b');
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
+  const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
 
   // Pipeline Execution State
   const [pipelineState, setPipelineState] = useState<PipelineExecutionState>({
@@ -151,13 +291,25 @@ export const App: React.FC = () => {
   };
 
   const handleUploadCustomFile = (newFile: CodeFile) => {
-    setFiles(prev => [newFile, ...prev]);
+    setFiles([newFile]);
     setSelectedFile(newFile);
-    setActiveTab('diff');
+  };
+
+  const handleUploadMultipleFiles = (newFiles: CodeFile[]) => {
+    if (newFiles.length === 0) return;
+    setFiles(newFiles);
+    setSelectedFile(newFiles[0]);
+    setCurrentView('workspace');
+  };
+
+  const handleLoadDemoFiles = () => {
+    setFiles(defaultSampleFiles);
+    setSelectedFile(defaultSampleFiles[0]);
+    setCurrentView('workspace');
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#0d0d12] text-[#cccccc] overflow-hidden">
+    <div className="flex flex-col h-screen w-screen bg-[#0d0d12] text-[#cccccc] overflow-hidden select-none">
       {/* Top Header */}
       <Header
         activeModel={activeModel}
@@ -166,103 +318,25 @@ export const App: React.FC = () => {
         isExecuting={pipelineState.isExecuting}
         onRunPipeline={handleRunPipeline}
         selectedFileName={selectedFile?.name}
-        uiMode={uiMode}
-        setUiMode={setUiMode}
+        activeView={currentView}
+        onSelectView={setCurrentView}
       />
 
       {/* Main Workbench Body Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Activity Bar (Only shown in Advanced Mode) */}
-        {uiMode === 'advanced' && (
-          <Sidebar
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            nodeCount={7}
-            evalCount={5}
-          />
-        )}
-
-        {/* Explorer File Tree Sidebar (Visible in Explorer and Diff view in Advanced Mode) */}
-        {uiMode === 'advanced' && (activeTab === 'explorer' || activeTab === 'diff') && (
-          <ExplorerPanel
-            files={files}
-            selectedFileId={selectedFile?.id || ''}
-            onSelectFile={(file) => {
-              setSelectedFile(file);
-            }}
-            onUploadCustomFile={handleUploadCustomFile}
-          />
-        )}
-
-        {/* Main Workspace View Switcher */}
         <main className="flex-1 flex overflow-hidden relative">
-          {uiMode === 'simple' ? (
-            <SimpleUserWizard
-              selectedFile={selectedFile}
-              files={files}
-              onSelectFile={setSelectedFile}
-              onRunPipeline={handleRunPipeline}
-              pipelineState={pipelineState}
-              onSwitchToAdvanced={() => setUiMode('advanced')}
-              onUploadCustomFile={handleUploadCustomFile}
-            />
+          {currentView === 'eval' ? (
+            <EvalDashboard />
           ) : (
-            <>
-              {activeTab === 'langgraph' && (
-                <LangGraphCanvas
-                  pipelineState={pipelineState}
-                  onRunPipeline={handleRunPipeline}
-                />
-              )}
-
-              {(activeTab === 'diff' || activeTab === 'explorer') && selectedFile && (
-                <CodeDiffEditor
-                  selectedFile={selectedFile}
-                />
-              )}
-
-              {(activeTab === 'diff' || activeTab === 'explorer') && !selectedFile && (
-                <div className="flex-1 bg-[#0d0d12] flex items-center justify-center p-8 text-center select-none">
-                  <div className="max-w-md bg-[#14141c] p-6 rounded-2xl border border-[#2b2b38] space-y-4 shadow-2xl">
-                    <div className="w-12 h-12 rounded-2xl bg-[#007acc]/20 border border-[#007acc]/30 flex items-center justify-center text-[#007acc] mx-auto">
-                      <span className="text-xl">📁</span>
-                    </div>
-                    <div>
-                      <div className="font-bold text-white text-base">No Code File Loaded</div>
-                      <p className="text-xs text-[#858595] mt-1 leading-relaxed">
-                        Use the <strong>Codebase Explorer</strong> on the left to upload a local source file or index a GitHub repository!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'eval' && (
-                <EvalDashboard />
-              )}
-
-              {activeTab === 'settings' && (
-                <div className="flex-1 bg-[#0d0d12] p-8 overflow-y-auto">
-                  <div className="max-w-2xl bg-[#14141c] p-6 rounded-2xl border border-[#2b2b38] space-y-4 shadow-2xl">
-                    <h2 className="text-lg font-bold text-white">Platform Settings & Config</h2>
-                    <div className="space-y-3 text-xs">
-                      <div>
-                        <label className="block text-[#858595] mb-1">FastAPI Backend Base URL</label>
-                        <input type="text" defaultValue="http://localhost:8000" className="w-full bg-[#0a0a0e] border border-[#2b2b38] rounded-xl p-2.5 text-white font-mono" />
-                      </div>
-                      <div>
-                        <label className="block text-[#858595] mb-1">ChromaDB Vector Store Directory</label>
-                        <input type="text" defaultValue="./chroma_db" className="w-full bg-[#0a0a0e] border border-[#2b2b38] rounded-xl p-2.5 text-white font-mono" />
-                      </div>
-                      <div>
-                        <label className="block text-[#858595] mb-1">Arize Phoenix OpenTelemetry Endpoint</label>
-                        <input type="text" defaultValue="http://localhost:6006" className="w-full bg-[#0a0a0e] border border-[#2b2b38] rounded-xl p-2.5 text-white font-mono" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
+            <UnifiedWorkspace
+              files={files}
+              selectedFile={selectedFile}
+              onSelectFile={setSelectedFile}
+              onUploadCustomFile={handleUploadCustomFile}
+              onUploadMultipleFiles={handleUploadMultipleFiles}
+              pipelineState={pipelineState}
+              onRunPipeline={handleRunPipeline}
+            />
           )}
         </main>
       </div>

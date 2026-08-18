@@ -16,7 +16,10 @@ import {
   Layers,
   Code2,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  Check,
+  PanelLeftClose
 } from 'lucide-react';
 import { CodeFile } from '../types';
 
@@ -25,7 +28,7 @@ interface ExplorerPanelProps {
   selectedFileId: string;
   onSelectFile: (file: CodeFile) => void;
   onUploadCustomFile?: (newFile: CodeFile) => void;
-  onClearFile?: () => void;
+  onToggleCollapse?: () => void;
 }
 
 export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
@@ -33,9 +36,10 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
   selectedFileId,
   onSelectFile,
   onUploadCustomFile,
-  onClearFile,
+  onToggleCollapse,
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,13 +57,21 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
     reader.readAsText(file);
   };
 
+  const handleCopyPath = (e: React.MouseEvent, path: string, id: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(path);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
+
   const filteredFiles = files.filter(f => 
     f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     f.path.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="w-full md:w-64 bg-[#0c0c14] border-b md:border-b-0 md:border-r border-[#202030] flex flex-col max-h-48 md:max-h-none h-full select-none text-xs flex-shrink-0 overflow-y-auto">
+    <div className="w-full h-full bg-[#11131c] flex flex-col select-none text-xs flex-shrink-0">
+      
       {/* Hidden file input */}
       <input 
         type="file" 
@@ -70,50 +82,62 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
       />
 
       {/* Explorer Header */}
-      <div className="h-11 px-3.5 flex items-center justify-between border-b border-[#202030] text-[#8e8ea6] font-semibold text-[11px] font-mono">
-        <div className="flex items-center space-x-1.5 text-white">
-          <Layers className="w-4 h-4 text-teal-400" />
-          <span className="tracking-wide">WORKSPACE</span>
+      <div className="h-10 px-3.5 flex items-center justify-between border-b border-[#232638] text-[#94a3b8] font-medium text-xs bg-[#0e1017]">
+        <div className="flex items-center space-x-2 text-white">
+          <Layers className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="font-semibold text-xs tracking-tight">WORKSPACE EXPLORER</span>
         </div>
-        {files.length > 0 && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center space-x-1 bg-[#181826] hover:bg-teal-950/60 hover:text-teal-300 border border-[#2c2c3e] hover:border-teal-500/40 text-[#a0a0b8] px-2 py-0.5 rounded-lg text-[11px] font-medium font-mono transition-all cursor-pointer"
-            title="Add File to Workspace"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add</span>
-          </button>
-        )}
+        
+        <div className="flex items-center space-x-1">
+          {files.length > 0 && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1 text-[#94a3b8] hover:text-white hover:bg-[#1c2030] rounded-lg transition-colors cursor-pointer"
+              title="Add File to Workspace"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="p-1 text-[#94a3b8] hover:text-white hover:bg-[#1c2030] rounded-lg transition-colors cursor-pointer"
+              title="Collapse Sidebar"
+            >
+              <PanelLeftClose className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* File Search Input (only shown if files exist) */}
-      {files.length > 0 && (
-        <div className="p-2.5 border-b border-[#202030]">
+      {/* File Search Input (shown if multiple files exist) */}
+      {files.length > 1 && (
+        <div className="p-2 border-b border-[#232638]">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-[#65657d] absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-3 h-3 text-[#64748b] absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Filter files..."
+              placeholder="Search files..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#12121c] border border-[#202030] text-white pl-8 pr-3 py-1.5 rounded-lg text-[11px] font-mono placeholder-[#55556d] focus:outline-none focus:border-teal-500/60 transition-colors"
+              className="w-full bg-[#0c0d14] border border-[#232638] text-white pl-7 pr-3 py-1 rounded-lg text-[11px] placeholder-[#64748b] focus:outline-none focus:border-indigo-500 transition-colors"
             />
           </div>
         </div>
       )}
 
       {/* Directory Folder Tree */}
-      <div className="p-2 overflow-y-auto flex-1 space-y-1">
+      <div className="p-1.5 overflow-y-auto flex-1 space-y-0.5">
         {filteredFiles.length > 0 ? (
           <>
-            <div className="flex items-center justify-between text-[#7d7d95] py-1 px-1.5 font-bold font-mono text-[10px] uppercase tracking-wider">
+            <div className="flex items-center justify-between text-[#64748b] py-1 px-2 font-semibold text-[10px] uppercase tracking-wider">
               <div className="flex items-center space-x-1.5">
-                <ChevronDown className="w-3.5 h-3.5 text-[#65657d]" />
-                <Folder className="w-3.5 h-3.5 text-teal-400" />
-                <span className="text-[#a0a0b8]">Open Modules</span>
+                <ChevronDown className="w-3 h-3 text-[#64748b]" />
+                <Folder className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Source Files</span>
               </div>
-              <span className="text-[10px] text-[#65657d]">{filteredFiles.length}</span>
+              <span className="text-[10px] text-[#64748b]">{filteredFiles.length}</span>
             </div>
 
             <div className="space-y-0.5 pt-0.5">
@@ -123,52 +147,63 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
                   <button
                     key={file.id}
                     onClick={() => onSelectFile(file)}
-                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all duration-150 text-left cursor-pointer group ${
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-all duration-150 text-left cursor-pointer group relative ${
                       isSelected
-                        ? 'bg-teal-950/60 text-white border border-teal-500/40 shadow-sm ring-1 ring-teal-500/20 font-medium'
-                        : 'text-[#a0a0b8] hover:bg-[#141420] hover:text-white border border-transparent'
+                        ? 'bg-indigo-600/15 text-white border-l-2 border-indigo-500 shadow-sm'
+                        : 'text-[#94a3b8] hover:bg-[#181a26] hover:text-white border-l-2 border-transparent'
                     }`}
                   >
                     <div className="flex items-center space-x-2 truncate min-w-0">
                       <FileCode className={`w-3.5 h-3.5 flex-shrink-0 ${
-                        isSelected ? 'text-teal-400' :
-                        file.language === 'python' ? 'text-teal-500/80' :
-                        file.language === 'typescript' ? 'text-blue-400/80' : 'text-emerald-400/80'
+                        isSelected ? 'text-indigo-400' : 'text-[#64748b] group-hover:text-[#94a3b8]'
                       }`} />
                       <div className="truncate">
-                        <div className="truncate font-mono text-[11px]">{file.name}</div>
-                        <div className="truncate text-[9px] text-[#606078] font-mono">{file.path}</div>
+                        <div className="truncate font-medium text-xs text-white">{file.name}</div>
+                        <div className="truncate text-[10px] text-[#64748b] font-mono">{file.path}</div>
                       </div>
                     </div>
 
-                    {/* Status Indicator */}
-                    <div className="flex items-center space-x-1.5 flex-shrink-0 pl-1">
+                    {/* Standardized Status Badges & Quick Action */}
+                    <div className="flex items-center space-x-1.5 flex-shrink-0 pl-1.5">
+                      {/* Copy Path Icon on Hover */}
+                      <button
+                        onClick={(e) => handleCopyPath(e, file.path, file.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-[#64748b] hover:text-white rounded transition-opacity"
+                        title="Copy file path"
+                      >
+                        {copiedId === file.id ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
+
                       {file.hasSecurityRisk && (
-                        <div 
+                        <span 
                           title="Security Risk: OWASP Vulnerability Detected" 
-                          className="flex items-center space-x-1 px-1.5 py-0.5 rounded-md bg-rose-950/50 text-rose-300 border border-rose-500/30 text-[9px] font-mono"
+                          className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/30 text-[9px] font-semibold flex items-center space-x-1"
                         >
                           <ShieldAlert className="w-2.5 h-2.5 text-rose-400" />
                           <span>RISK</span>
-                        </div>
+                        </span>
                       )}
                       {file.hasBug && !file.hasSecurityRisk && (
-                        <div 
+                        <span 
                           title="AST Issue: Bug Detected" 
-                          className="flex items-center space-x-1 px-1.5 py-0.5 rounded-md bg-amber-950/50 text-amber-300 border border-amber-500/30 text-[9px] font-mono"
+                          className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[9px] font-semibold flex items-center space-x-1"
                         >
                           <Bug className="w-2.5 h-2.5 text-amber-400" />
                           <span>BUG</span>
-                        </div>
+                        </span>
                       )}
                       {!file.hasBug && !file.hasSecurityRisk && (
-                        <div 
+                        <span 
                           title="Clean Code" 
-                          className="flex items-center space-x-1 px-1.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 text-[9px] font-mono"
+                          className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[9px] font-semibold flex items-center space-x-1"
                         >
                           <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
                           <span>PASS</span>
-                        </div>
+                        </span>
                       )}
                     </div>
                   </button>
@@ -177,29 +212,29 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
             </div>
           </>
         ) : (
-          /* Clean Quiet Empty State (Zero duplicate buttons) */
           <div className="p-4 text-center space-y-2 my-auto">
-            <div className="w-8 h-8 rounded-xl bg-[#141420] border border-[#202030] flex items-center justify-center text-teal-400 mx-auto">
+            <div className="w-8 h-8 rounded-xl bg-[#181a26] border border-[#232638] flex items-center justify-center text-indigo-400 mx-auto">
               <FolderPlus className="w-4 h-4" />
             </div>
             <div>
-              <div className="font-bold text-white text-xs font-mono">No Files Open</div>
-              <p className="text-[10px] text-[#65657d] mt-1 leading-relaxed">
-                Open a code file or index a repository to begin analysis.
+              <div className="font-semibold text-white text-xs">No Files Open</div>
+              <p className="text-[11px] text-[#64748b] mt-1 leading-relaxed">
+                Open a code file or repository to start.
               </p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer Info Box */}
-      <div className="p-3 border-t border-[#202030] bg-[#090910] text-[10px] text-[#65657d] flex items-center justify-between font-mono">
-        <span className="flex items-center space-x-1 text-[#8b8ba0]">
+      {/* Footer Status */}
+      <div className="p-2.5 border-t border-[#232638] bg-[#0c0d14] text-[10px] text-[#64748b] flex items-center justify-between font-mono">
+        <span className="flex items-center space-x-1.5 text-[#94a3b8]">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
-          <span>AST Tree-Sitter</span>
+          <span>AST Grounding</span>
         </span>
-        <span className="text-teal-400/80">Active</span>
+        <span className="text-indigo-400">Ready</span>
       </div>
+
     </div>
   );
 };

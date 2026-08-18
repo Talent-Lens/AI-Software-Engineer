@@ -1,13 +1,11 @@
 import React from 'react';
 import { 
   GitBranch, 
-  AlertCircle, 
   Check, 
-  Terminal, 
-  Cpu, 
   Clock, 
   Database,
-  Activity
+  Activity,
+  ShieldCheck
 } from 'lucide-react';
 import { CodeFile } from '../types';
 
@@ -24,48 +22,48 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   isExecuting,
   activeNodeName,
   isBackendConnected,
-  totalExecutionMs = 420,
+  totalExecutionMs = 415,
 }) => {
   return (
-    <footer className="h-6 bg-[#0a0a0e] text-[#8e8ea6] border-t border-[#252536] flex items-center justify-between px-3 text-[11px] font-mono select-none z-30">
+    <footer className="h-6 bg-[#0e1017] text-[#94a3b8] border-t border-[#232638] flex items-center justify-between px-3 text-[11px] select-none z-30 font-mono">
       {/* Left status items */}
       <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-1.5 hover:text-white px-1.5 py-0.5 rounded cursor-pointer">
-          <GitBranch className="w-3 h-3 text-teal-400" />
-          <span>main*</span>
+        <div className="flex items-center space-x-1.5 hover:text-white px-1.5 py-0.5 rounded cursor-pointer transition-colors">
+          <GitBranch className="w-3 h-3 text-indigo-400" />
+          <span>main</span>
         </div>
 
-        <div className="flex items-center space-x-1">
-          <Check className="w-3 h-3 text-emerald-400" />
-          <span className="text-emerald-300">0 syntax errors</span>
+        <div className="flex items-center space-x-1 text-emerald-400">
+          <Check className="w-3 h-3" />
+          <span>AST Verified (0 Errors)</span>
         </div>
 
         {isExecuting && (
-          <div className="flex items-center space-x-1.5 bg-teal-950/60 border border-teal-500/40 px-2 py-0.5 rounded animate-pulse">
-            <Activity className="w-3 h-3 text-teal-400 animate-spin" />
-            <span className="text-teal-200">Executing Node: <strong className="text-white">{activeNodeName || 'Running...'}</strong></span>
+          <div className="flex items-center space-x-1.5 bg-indigo-950/60 border border-indigo-500/40 px-2 py-0.5 rounded text-indigo-200">
+            <Activity className="w-3 h-3 text-indigo-400 animate-spin" />
+            <span>Executing: <strong className="text-white">{activeNodeName || 'Running...'}</strong></span>
           </div>
         )}
       </div>
 
       {/* Right status items */}
       <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-1 hover:text-white px-1.5 py-0.5 rounded cursor-pointer">
-          <Clock className="w-3 h-3 text-teal-400" />
-          <span>Latency: {totalExecutionMs}ms</span>
+        <div className="hidden sm:flex items-center space-x-1 hover:text-white px-1 py-0.5 rounded cursor-pointer">
+          <Clock className="w-3 h-3 text-indigo-400" />
+          <span>{totalExecutionMs}ms</span>
         </div>
 
-        <div className="flex items-center space-x-1 hover:text-white px-1.5 py-0.5 rounded cursor-pointer">
-          <Database className="w-3 h-3 text-cyan-400" />
-          <span>ChromaDB Vector Store</span>
+        <div className="hidden md:flex items-center space-x-1 hover:text-white px-1 py-0.5 rounded cursor-pointer">
+          <Database className="w-3 h-3 text-teal-400" />
+          <span>ChromaDB RRF</span>
         </div>
 
-        <div className="flex items-center space-x-1 hover:text-white px-1.5 py-0.5 rounded cursor-pointer">
-          <span>{selectedFile.language.toUpperCase()}</span>
+        <div className="flex items-center space-x-1 text-[#cbd5e1]">
+          <span>{selectedFile.language ? selectedFile.language.toUpperCase() : 'PYTHON'}</span>
         </div>
 
-        <div className="flex items-center space-x-1.5 bg-[#14141d] px-2 py-0.5 rounded border border-[#252536]">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <div className="flex items-center space-x-1.5 bg-[#151722] px-2 py-0.5 rounded border border-[#232638] text-[10px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
           <span className="text-white">UTF-8</span>
         </div>
       </div>

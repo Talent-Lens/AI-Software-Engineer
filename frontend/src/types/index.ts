@@ -12,7 +12,7 @@ export interface CodeFile {
   hasSecurityRisk: boolean;
   docstringStatus: 'missing' | 'generated' | 'verified';
   lineCitations: { line: number; text: string; status: 'verified' | 'hallucinated' }[];
-  securityIssues: { severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'; title: string; line: number; rule: string }[];
+  securityIssues: { severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'; title: string; line: number; rule: string; cwe?: string; description?: string; remediation?: string }[];
 }
 
 export type GraphNodeStatus = 'idle' | 'running' | 'success' | 'error';

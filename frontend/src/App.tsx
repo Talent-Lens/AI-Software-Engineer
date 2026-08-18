@@ -9,6 +9,7 @@ import { EvalDashboard } from './components/EvalDashboard';
 import { SimpleUserWizard } from './components/SimpleUserWizard';
 import { DeveloperLanding } from './components/DeveloperLanding';
 import { UnifiedWorkspace } from './components/UnifiedWorkspace';
+import { QuickTourModal } from './components/QuickTourModal';
 import { ActiveTab, CodeFile, PipelineExecutionState, UIMode } from './types';
 import { fetchHealthStatus } from './services/api';
 
@@ -157,6 +158,7 @@ export const App: React.FC = () => {
   const [activeModel, setActiveModel] = useState<string>('qwen-2.5-coder-32b');
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
+  const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
 
   // Pipeline Execution State
   const [pipelineState, setPipelineState] = useState<PipelineExecutionState>({
@@ -166,18 +168,18 @@ export const App: React.FC = () => {
     nodes: {
       retrieval: {
         id: 'retrieval',
-        name: 'Hybrid BM25 + Vector Search',
-        description: 'Dense MiniLM-L6 embeddings fused with BM25 keyword tokens via RRF (k=60)',
+        name: 'Retrieval Agent',
+        description: 'Retrieves relevant repository context and symbols for analysis.',
         category: 'retrieval',
-        status: 'success',
+        status: 'idle',
         durationMs: 42,
         outputPayload: { top_candidates: 20, reranked_top_k: 3, rrf_score: 0.982 },
         logs: ['[ChromaDB] Querying code embeddings...', '[BM25] AST Token matching...', '[RRF] Reciprocal Rank Fusion completed.']
       },
       detect: {
         id: 'detect',
-        name: 'AST Bug Detection Agent',
-        description: 'Parses code with tree-sitter AST to detect bare except clauses & silent exception swallowing',
+        name: 'AST Bug Detector',
+        description: 'Builds Tree-Sitter syntax trees and scans code for bugs.',
         category: 'agent',
         status: 'idle',
         durationMs: 120,
@@ -186,8 +188,8 @@ export const App: React.FC = () => {
       },
       syntax_check: {
         id: 'syntax_check',
-        name: 'AST Code Syntax & Lint Validator',
-        description: 'Guarantees 100% syntactically valid code suggestions via ast.parse and Ruff linting',
+        name: 'Syntax Verifier',
+        description: 'Validates proposed fixes for syntactic correctness.',
         category: 'verifier',
         status: 'idle',
         durationMs: 25,
@@ -196,8 +198,8 @@ export const App: React.FC = () => {
       },
       security_audit: {
         id: 'security_audit',
-        name: 'SAST Security Auditor Agent',
-        description: 'Scans retrieved chunks against OWASP Top 10 risks (SQL injection, hardcoded secrets)',
+        name: 'SAST Security Auditor',
+        description: 'Scans for OWASP Top 10 risks and security vulnerabilities.',
         category: 'agent',
         status: 'idle',
         durationMs: 85,
@@ -206,8 +208,8 @@ export const App: React.FC = () => {
       },
       line_verifier: {
         id: 'line_verifier',
-        name: 'Line-Number Grounding Verifier',
-        description: 'Verifies line citations against raw source file to eliminate hallucinated line numbers',
+        name: 'Line Grounding Verifier',
+        description: 'Confirms line numbers and grounding accuracy of suggested fixes.',
         category: 'verifier',
         status: 'idle',
         durationMs: 18,
@@ -216,8 +218,8 @@ export const App: React.FC = () => {
       },
       test_generator: {
         id: 'test_generator',
-        name: 'Self-Executing Unit Test Sandbox',
-        description: 'Generates pytest test suite and executes live in subprocess sandbox',
+        name: 'Pytest Test Sandbox',
+        description: 'Executes unit tests in an isolated subprocess to confirm fix correctness.',
         category: 'sandbox',
         status: 'idle',
         durationMs: 155,
@@ -226,8 +228,8 @@ export const App: React.FC = () => {
       },
       doc_verifier: {
         id: 'doc_verifier',
-        name: 'Docstring Accuracy Verifier',
-        description: 'Audits generated docstrings against AST function signatures and return types',
+        name: 'Docstring Auto-Verifier',
+        description: 'Validates and generates accurate docstrings for changes.',
         category: 'verifier',
         status: 'idle',
         durationMs: 30,
@@ -250,7 +252,7 @@ export const App: React.FC = () => {
       logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Triggering LangGraph Pipeline...`]
     }));
 
-    const stages = ['detect', 'syntax_check', 'security_audit', 'line_verifier', 'test_generator', 'doc_verifier'];
+    const stages = ['retrieval', 'detect', 'syntax_check', 'security_audit', 'line_verifier', 'test_generator', 'doc_verifier'];
     
     stages.forEach((stageId, index) => {
       setTimeout(() => {
@@ -308,6 +310,13 @@ export const App: React.FC = () => {
     setCurrentView('workspace');
   };
 
+  const handleLaunchGuidedDemo = () => {
+    setFiles(defaultSampleFiles);
+    setSelectedFile(defaultSampleFiles[0]);
+    setCurrentView('workspace');
+    handleRunPipeline();
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen bg-[#0d0d12] text-[#cccccc] overflow-hidden select-none">
       {/* Top Header */}
@@ -320,6 +329,7 @@ export const App: React.FC = () => {
         selectedFileName={selectedFile?.name}
         activeView={currentView}
         onSelectView={setCurrentView}
+        onOpenGuide={() => setIsGuideOpen(true)}
       />
 
       {/* Main Workbench Body Area */}
@@ -336,10 +346,18 @@ export const App: React.FC = () => {
               onUploadMultipleFiles={handleUploadMultipleFiles}
               pipelineState={pipelineState}
               onRunPipeline={handleRunPipeline}
+              onOpenGuide={() => setIsGuideOpen(true)}
             />
           )}
         </main>
       </div>
+
+      {/* Interactive Onboarding & Scope Guide Modal */}
+      <QuickTourModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        onStartDemo={handleLaunchGuidedDemo}
+      />
 
       {/* Bottom Status Bar */}
       {selectedFile && (

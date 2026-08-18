@@ -4,65 +4,101 @@
 
 @layer base {
   :root {
-    --vscode-bg: #0d0d12;
-    --vscode-sidebar: #14141d;
-    --vscode-activity: #0e0e15;
-    --vscode-border: #252536;
-    --vscode-accent: #14b8a6;
+    --app-bg: #0c0d14;
+    --app-surface: #151722;
+    --app-surface-hover: #1c1f2e;
+    --app-border: #232638;
+    --app-border-focus: #6366f1;
+    --app-primary: #6366f1;
+    --app-accent: #10b981;
   }
 
   body {
-    background-color: #0d0d12;
-    color: #cccccc;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #0c0d14;
+    color: #cbd5e1;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Scrollbar styles */
+/* Smooth custom scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d0d12;
+  background: #0c0d14;
 }
 ::-webkit-scrollbar-thumb {
-  background: #252536;
+  background: #232638;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #35354d;
+  background: #33384f;
 }
 
-/* LangGraph Canvas Animations */
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(20, 184, 166, 0.6), 0 0 30px rgba(16, 185, 129, 0.3);
-    border-color: #2dd4bf;
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.9), 0 0 50px rgba(20, 184, 166, 0.5);
-    border-color: #34d399;
-  }
+/* Subtle, warm card transitions */
+.warm-card {
+  background-color: #151722;
+  border: 1px solid #232638;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.node-running {
-  animation: pulse-glow 1.5s infinite ease-in-out;
+.warm-card:hover {
+  border-color: #383d59;
 }
 
-@keyframes laser-flow {
-  0% { stroke-dashoffset: 24; }
-  100% { stroke-dashoffset: 0; }
+/* Monaco Diff Editor Clean Soft GitHub/Cursor Theme (Subtle, Non-Distracting Colors) */
+.monaco-diff-editor .diagonal-fill {
+  background-image: none !important;
+  background-color: rgba(244, 63, 94, 0.04) !important;
 }
 
-.laser-line {
-  stroke-dasharray: 6;
-  animation: laser-flow 1s linear infinite;
+.monaco-diff-editor .line-delete,
+.monaco-diff-editor .editor.original .view-overlays .line-delete,
+.monaco-diff-editor .view-overlays .line-delete,
+.monaco-diff-editor .diff-delete {
+  background-color: rgba(244, 63, 94, 0.09) !important;
 }
 
-/* Glassmorphism panel */
+.monaco-diff-editor .char-delete,
+.monaco-diff-editor .editor.original .view-overlays .char-delete,
+.monaco-diff-editor .view-overlays .char-delete {
+  background-color: rgba(244, 63, 94, 0.20) !important;
+  border-radius: 3px;
+}
+
+.monaco-diff-editor .line-insert,
+.monaco-diff-editor .editor.modified .view-overlays .line-insert,
+.monaco-diff-editor .view-overlays .line-insert,
+.monaco-diff-editor .diff-insert {
+  background-color: rgba(16, 185, 129, 0.09) !important;
+}
+
+.monaco-diff-editor .char-insert,
+.monaco-diff-editor .editor.modified .view-overlays .char-insert,
+.monaco-diff-editor .view-overlays .char-insert {
+  background-color: rgba(16, 185, 129, 0.20) !important;
+  border-radius: 3px;
+}
+
+.monaco-diff-editor .diffOverviewRuler {
+  opacity: 0.5;
+}
+
+/* Monaco Folded / Unchanged Code Banner Styling */
+.monaco-editor .diffHiddenLines {
+  background-color: #151722 !important;
+  border-top: 1px dashed #282c3f !important;
+  border-bottom: 1px dashed #282c3f !important;
+  color: #818cf8 !important;
+  font-size: 11px !important;
+}
+
+/* Glass panel */
 .glass-panel {
-  background: rgba(20, 20, 29, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(37, 37, 54, 0.8);
+  background: rgba(21, 23, 34, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(35, 38, 56, 0.8);
 }

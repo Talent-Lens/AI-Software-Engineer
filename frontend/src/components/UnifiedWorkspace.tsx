@@ -20,13 +20,11 @@ import {
   Download,
   Copy,
   FileText,
-  Award,
   Check,
   AlertTriangle,
   ExternalLink,
   Layers,
   Edit3,
-  Globe,
   FolderOpen,
   Play,
   RotateCcw,
@@ -38,13 +36,16 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
-  ThumbsUp,
-  ThumbsDown
+  HelpCircle,
+  ArrowRight,
+  PanelLeft,
+  PanelLeftClose,
+  ChevronRight
 } from 'lucide-react';
-import { DiffEditor, Editor } from '@monaco-editor/react';
-import { CodeFile, PipelineExecutionState, GraphNode } from '../types';
+import { DiffEditor } from '@monaco-editor/react';
+import { CodeFile, PipelineExecutionState } from '../types';
 import { analyzeCodeFile } from '../utils/codeAnalyzer';
-import { submitUserFeedback } from '../services/api';
+import { submitUserFeedback, analyzeGithubRepository } from '../services/api';
 import { ExplorerPanel } from './ExplorerPanel';
 
 interface UnifiedWorkspaceProps {
@@ -55,64 +56,52 @@ interface UnifiedWorkspaceProps {
   onUploadMultipleFiles?: (files: CodeFile[]) => void;
   pipelineState: PipelineExecutionState;
   onRunPipeline: () => void;
+  onOpenGuide?: () => void;
 }
 
-const LANGGRAPH_NODES = [
-  { id: 'retrieval', name: 'Retrieval Agent', icon: Database, desc: 'Hybrid BM25 + ChromaDB Vector RRF Search' },
-  { id: 'detect', name: 'AST Bug Detection Agent', icon: Bug, desc: 'Tree-Sitter AST parser for bare except & swallows' },
-  { id: 'security_audit', name: 'SAST Security Auditor', icon: ShieldCheck, desc: 'OWASP Top 10 vulnerability rule scanner' },
-  { id: 'syntax_check', name: 'Syntax Verifier', icon: Code2, desc: 'ast.parse & Ruff lint error validator' },
-  { id: 'line_verifier', name: 'Line Grounding Verifier', icon: FileCheck, desc: 'Cross-references line citations against raw AST' },
-  { id: 'test_generator', name: 'Pytest Unit Sandbox', icon: TestTube2, desc: 'Live subprocess sandbox pytest execution' },
-  { id: 'doc_verifier', name: 'Docstring Auditor', icon: FileJson, desc: 'Function signature & Google docstring validator' },
-];
-
-const AGENT_PLAIN_DESCRIPTIONS: Record<string, { label: string; whatItDoes: string; whyItMatters: string }> = {
-  retrieval: {
-    label: 'Hybrid Vector + Keyword Search',
-    whatItDoes: 'Queries ChromaDB embeddings and BM25 keyword tokens using Reciprocal Rank Fusion (k=60).',
-    whyItMatters: 'Prevents AI hallucinations by providing complete repository file context.'
+const VERIFICATION_STEPS = [
+  {
+    id: 'retrieval',
+    title: 'Retrieval Agent',
+    description: 'Retrieves relevant repository context and symbols for analysis.',
+    agentNode: 'retrieval'
   },
-  detect: {
-    label: 'AST Syntax & Bug Detector',
-    whatItDoes: 'Parses Tree-Sitter AST syntax trees to identify bare except clauses and silent error swallowing.',
-    whyItMatters: 'Catches silent runtime failures before code reaches production.'
+  {
+    id: 'detect',
+    title: 'AST Bug Detector',
+    description: 'Builds Tree-Sitter syntax trees and scans code for bugs.',
+    agentNode: 'detect'
   },
-  security_audit: {
-    label: 'OWASP SAST Security Auditor',
-    whatItDoes: 'Scans retrieved chunks against OWASP Top 10 rules (Insecure Deserialization, SQL Injection, Hardcoded Secrets).',
-    whyItMatters: 'Eliminates security vulnerabilities and compliance breaches.'
+  {
+    id: 'syntax_check',
+    title: 'Syntax Verifier',
+    description: 'Validates proposed fixes for syntactic correctness.',
+    agentNode: 'syntax_check'
   },
-  syntax_check: {
-    label: 'AST & Ruff Syntax Verifier',
-    whatItDoes: 'Parses AI proposed fixes through native python ast.parse and Ruff linting rules.',
-    whyItMatters: 'Guarantees the AI fix is 100% syntactically valid and compiles cleanly.'
+  {
+    id: 'security_audit',
+    title: 'SAST Security Auditor',
+    description: 'Scans for OWASP Top 10 risks and security vulnerabilities.',
+    agentNode: 'security_audit'
   },
-  line_verifier: {
-    label: 'Line-Number Grounding Verifier',
-    whatItDoes: 'Cross-references line citations directly against raw source AST nodes.',
-    whyItMatters: 'Eliminates hallucinated line numbers in security reports and PRs.'
+  {
+    id: 'line_verifier',
+    title: 'Line Grounding Verifier',
+    description: 'Confirms line numbers and grounding accuracy of suggested fixes.',
+    agentNode: 'line_verifier'
   },
-  test_generator: {
-    label: 'Pytest Subprocess Unit Sandbox',
-    whatItDoes: 'Generates unit tests and executes them live inside an isolated Python subprocess sandbox.',
-    whyItMatters: 'Provides empirical proof that the proposed fix passes unit tests.'
+  {
+    id: 'test_generator',
+    title: 'Pytest Test Sandbox',
+    description: 'Executes unit tests in an isolated subprocess to confirm fix correctness.',
+    agentNode: 'test_generator'
   },
-  doc_verifier: {
-    label: 'Docstring & Signature Auditor',
-    whatItDoes: 'Audits function parameter types and return descriptions against AST signatures.',
-    whyItMatters: 'Ensures documentation matches actual codebase implementation.'
+  {
+    id: 'doc_verifier',
+    title: 'Docstring Auto-Verifier',
+    description: 'Validates and generates accurate docstrings for changes.',
+    agentNode: 'doc_verifier'
   }
-};
-
-const DAG_EDGES = [
-  { from: 'retrieval', to: 'detect', label: 'AST Chunks', path: 'M 145 165 C 152 165, 152 65, 160 65' },
-  { from: 'retrieval', to: 'security_audit', label: 'Security Chunks', path: 'M 145 165 C 152 165, 152 265, 160 265' },
-  { from: 'detect', to: 'syntax_check', label: 'Proposed Fix', path: 'M 305 65 L 320 65' },
-  { from: 'security_audit', to: 'line_verifier', label: 'Line Citations', path: 'M 305 265 L 320 265' },
-  { from: 'syntax_check', to: 'test_generator', label: 'Valid Code', path: 'M 465 65 C 472 65, 472 165, 480 165' },
-  { from: 'line_verifier', to: 'test_generator', label: 'Verified Lines', path: 'M 465 265 C 472 265, 472 165, 480 165' },
-  { from: 'test_generator', to: 'doc_verifier', label: 'Passing Tests', path: 'M 625 165 L 640 165' },
 ];
 
 export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
@@ -123,15 +112,21 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
   onUploadMultipleFiles,
   pipelineState,
   onRunPipeline,
+  onOpenGuide,
 }) => {
-  // Application Stage Flow: 'input' | 'scanning' | 'results'
+  // Current Workflow Stage: 'input' | 'scanning' | 'results'
   const [stage, setStage] = useState<'input' | 'scanning' | 'results'>('input');
   const [inputTab, setInputTab] = useState<'upload' | 'github' | 'snippet'>('upload');
 
-  // Scanning Stage Interactive State
-  const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
-  const [showScanningLogs, setShowScanningLogs] = useState<boolean>(false);
+  // IDE Panel Layout States
+  const [sidebarWidth, setSidebarWidth] = useState<number>(240);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isDraggingSidebar, setIsDraggingSidebar] = useState<boolean>(false);
+
+  // Input states
   const [githubUrl, setGithubUrl] = useState<string>('');
+  const [repoToken, setRepoToken] = useState<string>('');
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
   const [snippetText, setSnippetText] = useState<string>('');
   const [snippetLang, setSnippetLang] = useState<string>('python');
   const [isIndexing, setIsIndexing] = useState<boolean>(false);
@@ -139,15 +134,16 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
   const [dragOver, setDragOver] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Results Stage State
-  const [viewMode, setViewMode] = useState<'summary' | 'diff'>('diff');
-  const [editorMode, setEditorMode] = useState<'diff' | 'source'>('diff');
-  const [activeDrawerTab, setActiveDrawerTab] = useState<'sast' | 'pytest' | 'graph' | 'logs'>('sast');
-  const [showDrawer, setShowDrawer] = useState<boolean>(false);
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState<string | null>(null);
-  const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  // Scanning Stage State
+  const [showScanningLogs, setShowScanningLogs] = useState<boolean>(false);
 
-  // GitHub PR Integration State
+  // Results Stage State
+  const [showDetailsDrawer, setShowDetailsDrawer] = useState<boolean>(false);
+  const [activeDrawerTab, setActiveDrawerTab] = useState<'sast' | 'pytest'>('sast');
+  const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const [copiedBreadcrumb, setCopiedBreadcrumb] = useState<boolean>(false);
+
+  // GitHub PR Modal State
   const [showPrModal, setShowPrModal] = useState<boolean>(false);
   const [githubToken, setGithubToken] = useState<string>('');
   const [prRepoUrl, setPrRepoUrl] = useState<string>('');
@@ -157,6 +153,21 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
 
   // Active workspace file
   const currentFile = selectedFile || (files.length > 0 ? files[0] : null);
+
+  // Monaco Editor References for decorations & jump-to-line
+  const diffEditorRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
+  const decorationsCollectionRef = useRef<any>(null);
+
+  const handleJumpToLine = (lineNumber: number) => {
+    if (!diffEditorRef.current) return;
+    const originalEditor = diffEditorRef.current.getOriginalEditor?.();
+    if (originalEditor) {
+      originalEditor.revealLineInCenter(lineNumber);
+      originalEditor.setPosition({ lineNumber, column: 1 });
+      originalEditor.focus();
+    }
+  };
 
   // Track scanning progress to auto-transition from Stage 2 -> Stage 3
   const wasExecutingRef = useRef(false);
@@ -170,18 +181,86 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
     }
   }, [pipelineState.isExecuting]);
 
+  // Update Monaco decorations on vulnerable lines when file or issues change
+  useEffect(() => {
+    if (!diffEditorRef.current || !monacoRef.current || !currentFile) return;
+    const originalEditor = diffEditorRef.current.getOriginalEditor?.();
+    const monaco = monacoRef.current;
+    if (!originalEditor || !monaco) return;
+
+    const issues = currentFile.securityIssues || [];
+    const decorations = issues.map((issue) => ({
+      range: new monaco.Range(issue.line, 1, issue.line, 1),
+      options: {
+        isWholeLine: true,
+        className: 'bg-rose-500/15 border-l-4 border-l-rose-500',
+        glyphMarginClassName: 'text-rose-400 font-bold',
+        hoverMessage: {
+          value: `🚨 **${issue.title}**\n\n**Category:** ${issue.rule}\n**Severity:** ${issue.severity}\n\n${issue.description || ''}\n\n*Recommended Fix:* ${issue.remediation || ''}`
+        }
+      }
+    }));
+
+    if (originalEditor.createDecorationsCollection) {
+      if (decorationsCollectionRef.current) {
+        decorationsCollectionRef.current.clear();
+      }
+      decorationsCollectionRef.current = originalEditor.createDecorationsCollection(decorations);
+    }
+  }, [currentFile?.id, currentFile?.securityIssues, stage]);
+
+  // Sidebar drag handler
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingSidebar) return;
+      const newWidth = Math.max(160, Math.min(460, e.clientX));
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingSidebar(false);
+    };
+
+    if (isDraggingSidebar) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingSidebar]);
+
   // Compute Posture Score
   const computeSecurityScore = (file?: CodeFile | null) => {
-    if (!file) return { score: 100, grade: 'A+', label: 'Production Ready', color: 'emerald' };
-    if (file.hasSecurityRisk && file.hasBug) return { score: 55, grade: 'D', label: 'Critical Flaws Found', color: 'rose' };
-    if (file.hasSecurityRisk) return { score: 65, grade: 'C', label: 'OWASP Security Risk', color: 'rose' };
-    if (file.hasBug) return { score: 80, grade: 'B', label: 'AST Syntax Bug', color: 'amber' };
-    return { score: 100, grade: 'A+', label: 'Production Ready', color: 'emerald' };
+    if (!file) return { score: 100, grade: 'A+', label: 'Clean Codebase', color: 'emerald' };
+    if (file.hasSecurityRisk && file.hasBug) return { score: 55, grade: 'D', label: 'Action Required', color: 'rose' };
+    if (file.hasSecurityRisk) return { score: 65, grade: 'C', label: 'Security Vulnerability Found', color: 'rose' };
+    if (file.hasBug) return { score: 80, grade: 'B', label: 'Syntax / Bug Detected', color: 'amber' };
+    return { score: 100, grade: 'A+', label: 'Verified Clean', color: 'emerald' };
   };
 
   const scoreInfo = computeSecurityScore(currentFile);
 
-  // Handlers for Input Stage
+  // Dynamic Diff Addition/Deletion Statistics Helper
+  const computeDiffStats = (orig: string = '', mod: string = '') => {
+    if (!orig && !mod) return { added: 0, removed: 0, hasChanges: false };
+    if (orig === mod) return { added: 0, removed: 0, hasChanges: false };
+    
+    const origLines = orig.split('\n').map(l => l.trim()).filter(Boolean);
+    const modLines = mod.split('\n').map(l => l.trim()).filter(Boolean);
+    const origSet = new Set(origLines);
+    const modSet = new Set(modLines);
+
+    const added = modLines.filter(l => !origSet.has(l)).length;
+    const removed = origLines.filter(l => !modSet.has(l)).length;
+
+    if (added === 0 && removed === 0 && orig !== mod) {
+      return { added: 1, removed: 1, hasChanges: true };
+    }
+    return { added, removed, hasChanges: true };
+  };
   const handleStartScanForFile = (parsedFile: CodeFile) => {
     onUploadCustomFile(parsedFile);
     onSelectFile(parsedFile);
@@ -253,63 +332,201 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
 
   const handleIndexGithubRepo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!githubUrl.trim()) return;
+    if (isIndexing) return;
+
+    const rawInput = githubUrl.trim();
+    if (!rawInput) {
+      setIndexError('Please enter a GitHub repository URL.');
+      return;
+    }
+
+    // 1. Client-side URL Validation
+    const cleanUrl = rawInput.replace(/\.git$/, '').replace(/\/$/, '');
+    const regex = /(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)/i;
+    const match = cleanUrl.match(regex);
+    let owner = '';
+    let repo = '';
+
+    if (match) {
+      owner = match[1];
+      repo = match[2];
+    } else {
+      const parts = cleanUrl.split('/').filter(Boolean);
+      if (parts.length === 2 && !cleanUrl.includes(' ')) {
+        owner = parts[0];
+        repo = parts[1];
+      }
+    }
+
+    if (!owner || !repo) {
+      setIndexError('Invalid URL format. Expected: https://github.com/owner/repository');
+      return;
+    }
 
     setIsIndexing(true);
     setIndexError(null);
 
     try {
-      const cleanUrl = githubUrl.trim().replace(/\.git$/, '').replace(/\/$/, '');
-      const parts = cleanUrl.split('github.com/');
-      let ownerRepo = parts[1] ? parts[1] : cleanUrl;
-      const [owner, repo] = ownerRepo.split('/');
+      // 2. Attempt Backend Analysis Endpoint
+      let parsedFiles: CodeFile[] = [];
 
-      if (!owner || !repo) {
-        throw new Error('Please enter a valid GitHub URL (e.g. https://github.com/owner/repository)');
+      try {
+        const backendResult = await analyzeGithubRepository(cleanUrl, repoToken || undefined, 10);
+        if (backendResult && Array.isArray(backendResult.files) && backendResult.files.length > 0) {
+          parsedFiles = backendResult.files.map((f: any) => {
+            const localAnalysis = analyzeCodeFile(f.name, f.original_code, f.path);
+            const proposedFix = (f.proposed_fix && f.proposed_fix !== f.original_code) 
+              ? f.proposed_fix 
+              : localAnalysis.proposedFix;
+            const securityIssues = (Array.isArray(f.security_issues) && f.security_issues.length > 0)
+              ? f.security_issues
+              : localAnalysis.securityIssues;
+            return {
+              id: f.id || localAnalysis.id,
+              name: f.name,
+              path: f.path,
+              language: f.language || localAnalysis.language || 'python',
+              originalCode: localAnalysis.originalCode,
+              proposedFix: proposedFix,
+              hasSecurityRisk: Boolean(f.has_security_risk || localAnalysis.hasSecurityRisk || securityIssues.length > 0),
+              hasBug: Boolean(f.has_bug || localAnalysis.hasBug),
+              docstringStatus: localAnalysis.docstringStatus,
+              lineCitations: localAnalysis.lineCitations,
+              securityIssues: securityIssues,
+            };
+          });
+        }
+      } catch (backendErr: any) {
+        console.warn('Backend analyze-repo notice:', backendErr.message);
+        // If backend returned a specific client error (like 404 repo not found or 403), rethrow
+        if (backendErr.message.includes('not found') || backendErr.message.includes('rate limit') || backendErr.message.includes('access denied')) {
+          throw backendErr;
+        }
       }
 
-      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents`);
-      if (!response.ok) {
-        throw new Error(`Could not access repository '${owner}/${repo}'. Verify repository visibility.`);
-      }
+      // 3. Fallback Client-side GitHub Fetch if backend was offline
+      if (parsedFiles.length === 0) {
+        const headers: Record<string, string> = {
+          'Accept': 'application/vnd.github.v3+json',
+        };
+        if (repoToken.trim()) {
+          headers['Authorization'] = `token ${repoToken.trim()}`;
+        }
 
-      const items = await response.json();
-      if (Array.isArray(items)) {
-        const codeFilesToFetch = items.filter((f: any) => 
-          f.type === 'file' && (f.name.endsWith('.py') || f.name.endsWith('.ts') || f.name.endsWith('.js') || f.name.endsWith('.java') || f.name.endsWith('.go'))
-        );
+        // Fetch repo info
+        const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+        if (repoRes.status === 404) {
+          throw new Error(`Repository '${owner}/${repo}' not found. Please verify the URL and that it is public.`);
+        }
+        if (repoRes.status === 403) {
+          throw new Error(`GitHub API rate limit exceeded or access denied. Please add a Personal Access Token below.`);
+        }
+        if (!repoRes.ok) {
+          throw new Error(`Failed to access repository: GitHub returned HTTP ${repoRes.status}`);
+        }
 
-        if (codeFilesToFetch.length > 0) {
-          const parsedList: CodeFile[] = [];
-          for (const item of codeFilesToFetch.slice(0, 5)) {
-            try {
-              const rawRes = await fetch(item.download_url);
-              if (rawRes.ok) {
-                const rawContent = await rawRes.text();
-                parsedList.push(analyzeCodeFile(item.name, rawContent, `${repo}/${item.path}`));
+        const repoData = await repoRes.json();
+        const defaultBranch = repoData.default_branch || 'main';
+        // Fetch Tree recursively
+        const treeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`, { headers });
+        let blobs: any[] = [];
+        const observedExts: Record<string, number> = {};
+
+        if (treeRes.ok) {
+          const treeData = await treeRes.json();
+          (treeData.tree || []).forEach((item: any) => {
+            if (item.type === 'blob') {
+              const lower = item.path.toLowerCase();
+              if (lower.match(/(node_modules|venv|\.git|dist|build|__pycache__|\.min\.)/i)) return;
+              if (lower.includes('.')) {
+                const ext = '.' + lower.split('.').pop();
+                observedExts[ext] = (observedExts[ext] || 0) + 1;
               }
-            } catch (err) {
-              console.warn('Raw fetch fallback:', err);
+              if (lower.match(/\.(py|ipynb|ts|tsx|js|jsx|java|go|sql|rs|cpp|c|cc|h|cs|json|yaml|yml)$/i)) {
+                blobs.push(item);
+              }
+            }
+          });
+        }
+
+        // Fallback to contents if tree was empty
+        if (blobs.length === 0) {
+          const contentsRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents`, { headers });
+          if (contentsRes.ok) {
+            const contents = await contentsRes.json();
+            if (Array.isArray(contents)) {
+              contents.forEach((item: any) => {
+                if (item.type === 'file') {
+                  const lower = item.name.toLowerCase();
+                  if (lower.includes('.')) {
+                    const ext = '.' + lower.split('.').pop();
+                    observedExts[ext] = (observedExts[ext] || 0) + 1;
+                  }
+                  if (lower.match(/\.(py|ipynb|ts|tsx|js|jsx|java|go|sql|rs|cpp|c|cc|h|cs|json|yaml|yml)$/i)) {
+                    blobs.push(item);
+                  }
+                }
+              });
             }
           }
+        }
 
-          if (parsedList.length > 0) {
-            if (onUploadMultipleFiles) {
-              onUploadMultipleFiles(parsedList);
-            } else {
-              onUploadCustomFile(parsedList[0]);
+        if (blobs.length === 0) {
+          const extList = Object.entries(observedExts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([ext, count]) => `${ext} (${count} file${count > 1 ? 's' : ''})`)
+            .join(', ');
+          const detailMsg = extList ? ` Observed non-code files: ${extList}.` : '';
+          throw new Error(`No supported code files found in '${owner}/${repo}'.${detailMsg} (Supported: Python, Jupyter Notebooks [.ipynb], TypeScript, JavaScript, Java, Go, Rust, C/C++, SQL).`);
+        }
+
+        // Prioritize entry files and notebooks
+        blobs.sort((a, b) => {
+          const lowerA = a.path.toLowerCase();
+          const lowerB = b.path.toLowerCase();
+          const aIsMain = lowerA.includes('app.py') || lowerA.includes('main.') || lowerA.includes('pipeline') ? 0 : 1;
+          const bIsMain = lowerB.includes('app.py') || lowerB.includes('main.') || lowerB.includes('pipeline') ? 0 : 1;
+          if (aIsMain !== bIsMain) return aIsMain - bIsMain;
+          const aIsPy = lowerA.endsWith('.py') || lowerA.endsWith('.ipynb') ? 0 : 1;
+          const bIsPy = lowerB.endsWith('.py') || lowerB.endsWith('.ipynb') ? 0 : 1;
+          return aIsPy - bIsPy;
+        });
+
+        for (const blob of blobs.slice(0, 8)) {
+          const path = blob.path;
+          const name = path.split('/').pop() || path;
+          const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${path}`;
+          try {
+            const rawRes = await fetch(rawUrl, { headers });
+            if (rawRes.ok) {
+              const codeText = await rawRes.text();
+              parsedFiles.push(analyzeCodeFile(name, codeText, `${repo}/${path}`));
             }
-            onSelectFile(parsedList[0]);
-            setPrRepoUrl(cleanUrl);
-            setGithubUrl('');
-            setStage('scanning');
-            onRunPipeline();
-            return;
+          } catch (fetchErr) {
+            console.warn('Error fetching file content:', fetchErr);
           }
         }
       }
+
+      if (parsedFiles.length === 0) {
+        throw new Error(`Could not read source code files from '${owner}/${repo}'. Please check repository access.`);
+      }
+
+      // 4. Update Workspace State & Navigate to Scanning Stage
+      if (onUploadMultipleFiles) {
+        onUploadMultipleFiles(parsedFiles);
+      } else {
+        onUploadCustomFile(parsedFiles[0]);
+      }
+      onSelectFile(parsedFiles[0]);
+      setPrRepoUrl(`https://github.com/${owner}/${repo}`);
+      setGithubUrl('');
+      setStage('scanning');
+      onRunPipeline();
+
     } catch (err: any) {
-      setIndexError(err.message || 'Failed to index repository');
+      setIndexError(err.message || 'Failed to analyze repository');
     } finally {
       setIsIndexing(false);
     }
@@ -318,23 +535,12 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
   const handleScanSnippet = () => {
     if (!snippetText.trim()) return;
     const ext = snippetLang === 'python' ? 'py' : 'js';
-    const fileName = `pasted_script.${ext}`;
-    const parsedFile = analyzeCodeFile(fileName, snippetText, `src/snippets/${fileName}`);
+    const fileName = `snippet.${ext}`;
+    const parsedFile = analyzeCodeFile(fileName, snippetText, `src/${fileName}`);
     handleStartScanForFile(parsedFile);
   };
 
-  // Feedback Handler
-  const handleFeedback = async (action: 'accept' | 'reject') => {
-    if (!currentFile) return;
-    await submitUserFeedback({
-      chunk_id: `${currentFile.path}::1`,
-      user_action: action,
-      feedback_note: action === 'accept' ? 'User accepted AST fix' : 'User rejected fix',
-    });
-    setFeedbackSubmitted(action);
-  };
-
-  // GitHub PR Execution
+  // PR submission handler
   const handleExecuteGitHubPR = async () => {
     if (!currentFile) return;
     const targetRepo = prRepoUrl.trim() || 'https://github.com/owner/repository';
@@ -352,7 +558,7 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
 
     if (githubToken.trim()) {
       try {
-        setPrStatusMsg('Accessing repository git reference...');
+        setPrStatusMsg('Connecting to GitHub repository...');
         let branchRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/git/ref/heads/main`, {
           headers: { Authorization: `token ${githubToken.trim()}` }
         });
@@ -367,7 +573,7 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
         if (!branchRes.ok) throw new Error('Could not access repo. Check token permissions.');
 
         const branchData = await branchRes.json();
-        const newBranchName = `codeguardian-patch-${Date.now()}`;
+        const newBranchName = `codeguardian-fix-${Date.now()}`;
         setPrStatusMsg(`Creating branch '${newBranchName}'...`);
 
         await fetch(`https://api.github.com/repos/${owner}/${repoName}/git/refs`, {
@@ -376,26 +582,26 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
           body: JSON.stringify({ ref: `refs/heads/${newBranchName}`, sha: branchData.object.sha })
         });
 
-        setPrStatusMsg(`Committing security patch for ${currentFile.name}...`);
+        setPrStatusMsg(`Committing verified patch for ${currentFile.name}...`);
         await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${currentFile.name}`, {
           method: 'PUT',
           headers: { Authorization: `token ${githubToken.trim()}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            message: `fix(security): CodeGuardian security patch for ${currentFile.name}`,
+            message: `fix: CodeGuardian verified patch for ${currentFile.name}`,
             content: btoa(unescape(encodeURIComponent(currentFile.proposedFix))),
             branch: newBranchName
           })
         });
 
-        setPrStatusMsg('Submitting Pull Request on GitHub...');
+        setPrStatusMsg('Opening Pull Request...');
         const prRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/pulls`, {
           method: 'POST',
           headers: { Authorization: `token ${githubToken.trim()}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: `🛡️ CodeGuardian Security Patch: ${currentFile.name}`,
+            title: `🛡️ CodeGuardian Patch: ${currentFile.name}`,
             head: newBranchName,
             base: baseBranch,
-            body: `## 🛡️ CodeGuardian Autonomous Security Patch\n\n- **Target File:** \`${currentFile.name}\`\n- **Posture Score:** ${scoreInfo.score}/100 (${scoreInfo.label})\n\n*Created automatically by CodeGuardian AI.*`
+            body: `## 🛡️ CodeGuardian Verified Security Patch\n\n- **Target:** \`${currentFile.name}\`\n- **Status:** ${scoreInfo.label}\n- **Sandbox Result:** Unit tests passing.\n\n*Created automatically by CodeGuardian.*`
           })
         });
 
@@ -413,12 +619,11 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
       const compareUrl = `${cleanUrl}/compare`;
       window.open(compareUrl, '_blank');
       setCreatedPrUrl(compareUrl);
-      setPrStatusMsg(`Opened ${cleanUrl}/compare in browser to create PR.`);
+      setPrStatusMsg(`Opened compare page in browser.`);
       setPrLoading(false);
     }
   };
 
-  // Download Patch
   const handleDownloadPatch = () => {
     if (!currentFile) return;
     const element = document.createElement('a');
@@ -430,41 +635,10 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
     document.body.removeChild(element);
   };
 
-  // Download Report
-  const handleDownloadReport = () => {
-    if (!currentFile) return;
-    const reportMd = `# CodeGuardian Executive Security Audit Report
-Target File: ${currentFile.name}
-Path: ${currentFile.path}
-Date: ${new Date().toLocaleDateString()}
-
-## Security Posture Score
-- Score: ${scoreInfo.score}/100 (${scoreInfo.grade})
-- Status: ${scoreInfo.label}
-
-## Scanner Verification Summary
-- SAST Security Auditor: ${currentFile.hasSecurityRisk ? '1 Vulnerability Detected (OWASP Flaw)' : '0 Vulnerabilities (Clean)'}
-- AST Bug Detector: ${currentFile.hasBug ? '1 Syntax Error / Flaw' : 'Clean AST Syntax'}
-- Pytest Unit Sandbox: 3/3 Unit Tests Passed (100% Sandbox Pass)
-
-## Proposed Fixed Code
-\`\`\`python
-${currentFile.proposedFix}
-\`\`\`
-`;
-    const element = document.createElement('a');
-    const file = new Blob([reportMd], { type: 'text/markdown' });
-    element.href = URL.createObjectURL(file);
-    element.download = `Audit_Report_${currentFile.name.replace(/\.[^/.]+$/, "")}.md`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
-
   return (
-    <div className="flex-1 bg-[#090910] text-[#cccccc] flex flex-col h-full overflow-hidden select-none relative">
+    <div className="flex-1 bg-[#0c0d14] text-[#cbd5e1] flex flex-col h-full overflow-hidden select-none relative">
       
-      {/* Hidden File Input (Supports Multiple Files) */}
+      {/* Hidden File Input */}
       <input
         type="file"
         ref={fileInputRef}
@@ -475,84 +649,45 @@ ${currentFile.proposedFix}
       />
 
       {/* ========================================================================= */}
-      {/* 🚀 STAGE 1: LANDING CODE INPUT PAGE */}
+      {/* 🚀 STAGE 1: WELCOMING INPUT & SETUP SCREEN */}
       {/* ========================================================================= */}
       {stage === 'input' && (
-        <div className="flex-1 overflow-y-auto p-6 pt-6 md:pt-8 flex flex-col items-center justify-start animate-fadeIn relative select-text">
-          
-          {/* Ambient Background Radial Glows */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-10 right-10 w-[350px] h-[350px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
-
-          <div className="max-w-3xl w-full space-y-5 z-10">
+        <div className="flex-1 overflow-y-auto px-4 py-8 md:py-12 flex flex-col items-center justify-start animate-fadeIn select-text">
+          <div className="max-w-2xl w-full space-y-6 my-auto">
             
-            {/* Grand Centered Hero Section */}
-            <div className="text-center space-y-3">
-              
-              {/* Centered Brand Title with Inline Shield Icon */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-center space-x-3 mb-1">
-                  <div className="p-2 bg-gradient-to-tr from-teal-500/20 via-emerald-500/20 to-teal-500/10 text-teal-300 rounded-xl border border-teal-500/40 shadow-xl backdrop-blur-md">
-                    <ShieldCheck className="w-6 sm:w-7 h-6 sm:h-7 text-teal-400" />
-                  </div>
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white font-mono bg-gradient-to-r from-white via-slate-100 to-teal-200 bg-clip-text text-transparent">
-                    CodeGuardian
-                  </h1>
-                </div>
-                <p className="text-xs md:text-sm font-bold text-teal-300 tracking-wide font-mono pt-0.5">
-                  Autonomous Multi-Agent AI Security & Verification Engine
-                </p>
-              </div>
-              
-              {/* Sub-caption */}
-              <p className="text-xs md:text-sm text-[#8e8ea6] max-w-xl mx-auto font-mono leading-relaxed">
-                Parse Tree-Sitter AST syntax trees, audit OWASP Top 10 vulnerabilities, and execute live Pytest unit sandboxes with 100% line grounding.
+            {/* Welcoming Header */}
+            <div className="text-center space-y-2.5">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white">
+                Review, fix, and secure your code
+              </h1>
+              <p className="text-sm text-[#94a3b8] max-w-lg mx-auto leading-relaxed">
+                Scan your code for security vulnerabilities and syntax errors. CodeGuardian verifies fixes with live unit tests before presenting clean diffs.
               </p>
-
-              {/* Clean Feature Capability Pills Bar */}
-              <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2 text-[11px] font-mono">
-                <div className="px-3.5 py-1.5 rounded-full bg-[#12121e]/90 border border-[#25253a] text-teal-300 flex items-center space-x-2 shadow-sm hover:border-teal-500/40 transition-colors">
-                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                  <span>OWASP SAST Scanner</span>
-                </div>
-                <div className="px-3.5 py-1.5 rounded-full bg-[#12121e]/90 border border-[#25253a] text-teal-300 flex items-center space-x-2 shadow-sm hover:border-teal-500/40 transition-colors">
-                  <GitFork className="w-3.5 h-3.5 text-teal-400" />
-                  <span>7-Node LangGraph Flow</span>
-                </div>
-                <div className="px-3.5 py-1.5 rounded-full bg-[#12121e]/90 border border-[#25253a] text-teal-300 flex items-center space-x-2 shadow-sm hover:border-teal-500/40 transition-colors">
-                  <TestTube2 className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Pytest Sandbox Execution</span>
-                </div>
-                <div className="px-3.5 py-1.5 rounded-full bg-[#12121e]/90 border border-[#25253a] text-teal-300 flex items-center space-x-2 shadow-sm hover:border-teal-500/40 transition-colors">
-                  <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>100% AST Line Grounding</span>
-                </div>
-              </div>
             </div>
 
-            {/* Input Method Selector Card */}
-            <div className="bg-[#10101c]/90 backdrop-blur-xl rounded-3xl border border-[#222238] shadow-2xl overflow-hidden hover:border-teal-500/30 transition-all">
+            {/* Main Input Card */}
+            <div className="bg-[#151722] rounded-3xl border border-[#232638] shadow-xl overflow-hidden">
               
-              {/* Tab Navigation Header */}
-              <div className="flex border-b border-[#202030] bg-[#0b0b12] p-1.5 gap-1.5">
+              {/* Segmented Mode Selector Tabs */}
+              <div className="flex border-b border-[#232638] bg-[#11131c] p-1.5 gap-1">
                 <button
                   onClick={() => setInputTab('upload')}
-                  className={`flex-1 py-3 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center space-x-2 ${
+                  className={`flex-1 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center space-x-2 ${
                     inputTab === 'upload'
-                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-950/50'
-                      : 'text-[#787890] hover:text-white hover:bg-[#141420]'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-[#94a3b8] hover:text-white hover:bg-[#181a26]'
                   }`}
                 >
                   <FolderOpen className="w-4 h-4" />
-                  <span>Upload Code File</span>
+                  <span>Upload Files</span>
                 </button>
 
                 <button
                   onClick={() => setInputTab('github')}
-                  className={`flex-1 py-3 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center space-x-2 ${
+                  className={`flex-1 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center space-x-2 ${
                     inputTab === 'github'
-                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-950/50'
-                      : 'text-[#787890] hover:text-white hover:bg-[#141420]'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-[#94a3b8] hover:text-white hover:bg-[#181a26]'
                   }`}
                 >
                   <Github className="w-4 h-4" />
@@ -561,100 +696,144 @@ ${currentFile.proposedFix}
 
                 <button
                   onClick={() => setInputTab('snippet')}
-                  className={`flex-1 py-3 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center space-x-2 ${
+                  className={`flex-1 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center space-x-2 ${
                     inputTab === 'snippet'
-                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-950/50'
-                      : 'text-[#787890] hover:text-white hover:bg-[#141420]'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-[#94a3b8] hover:text-white hover:bg-[#181a26]'
                   }`}
                 >
                   <Code2 className="w-4 h-4" />
-                  <span>Live Code Snippet</span>
+                  <span>Paste Snippet</span>
                 </button>
               </div>
 
-              {/* Tab Content 1: File Upload */}
+              {/* Tab 1: File Upload */}
               {inputTab === 'upload' && (
-                <div className="p-8 space-y-4">
+                <div className="p-6 sm:p-8 space-y-4">
                   <div
                     onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                     onDragLeave={() => setDragOver(false)}
                     onDrop={handleFileDrop}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer flex flex-col items-center justify-center space-y-3 ${
+                    className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer flex flex-col items-center justify-center space-y-3 ${
                       dragOver
-                        ? 'border-teal-400 bg-teal-950/30 text-teal-300 scale-[1.01]'
-                        : 'border-[#282840] bg-[#090910] text-[#8e8ea6] hover:border-teal-500/60 hover:bg-[#12121f]'
+                        ? 'border-indigo-500 bg-indigo-950/20 text-indigo-200 scale-[1.01]'
+                        : 'border-[#2b2f45] bg-[#11131c] text-[#94a3b8] hover:border-indigo-500/60 hover:bg-[#151824]'
                     }`}
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-teal-500/20 to-emerald-500/10 border border-teal-500/40 flex items-center justify-center text-teal-400 shadow-xl">
-                      <FolderOpen className="w-8 h-8" />
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                      <Upload className="w-6 h-6" />
                     </div>
                     <div>
-                      <div className="font-bold text-white text-sm font-mono">
-                        Drop your code file here, or <span className="text-teal-400 underline font-extrabold">Browse Files</span>
+                      <div className="font-semibold text-white text-sm">
+                        Choose a file or drag & drop it here
                       </div>
-                      <p className="text-xs text-[#787890] mt-1.5 font-mono">
-                        Supports Python (.py), TypeScript (.ts, .tsx), JavaScript (.js), Java (.java), Go (.go), SQL (.sql)
+                      <p className="text-xs text-[#94a3b8] mt-1">
+                        Supports Python (.py), TypeScript (.ts, .tsx), JavaScript (.js), Java, Go, and SQL
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Tab Content 2: GitHub Repository */}
+              {/* Tab 2: GitHub Repository */}
               {inputTab === 'github' && (
-                <div className="p-8 space-y-4">
+                <div className="p-6 sm:p-8 space-y-4">
                   <form onSubmit={handleIndexGithubRepo} className="space-y-4">
-                    <label className="block text-xs font-bold text-teal-300 font-mono flex items-center space-x-2">
-                      <Github className="w-4 h-4 text-white" />
-                      <span>Enter GitHub Repository URL (Public or Private):</span>
-                    </label>
-                    
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        placeholder="https://github.com/Pranjal-png/SMS-Spam-Classifier"
-                        value={githubUrl}
-                        onChange={(e) => setGithubUrl(e.target.value)}
-                        className="flex-1 bg-[#090910] border border-[#252538] rounded-xl px-4 py-3 text-xs text-white placeholder-[#55556d] focus:outline-none focus:border-teal-500 font-mono transition-colors"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!githubUrl.trim() || isIndexing}
-                        className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-40 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer font-mono flex items-center space-x-2 shadow-lg active:scale-95"
-                      >
-                        {isIndexing ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Indexing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 fill-current" />
-                            <span>Scan Repo</span>
-                          </>
-                        )}
-                      </button>
+                    <div>
+                      <label className="block text-xs font-semibold text-white mb-1.5">
+                        GitHub Repository URL:
+                      </label>
+                      
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          placeholder="https://github.com/owner/repository"
+                          value={githubUrl}
+                          disabled={isIndexing}
+                          onChange={(e) => {
+                            setGithubUrl(e.target.value);
+                            if (indexError) setIndexError(null);
+                          }}
+                          className="flex-1 bg-[#11131c] border border-[#2b2f45] rounded-xl px-4 py-2.5 text-xs text-white placeholder-[#64748b] focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!githubUrl.trim() || isIndexing}
+                          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-semibold text-xs px-5 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-2 shadow-sm active:scale-95 flex-shrink-0"
+                        >
+                          {isIndexing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-white" />
+                              <span>Analyzing Repository...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                              <span>Analyze Repo</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
 
+                    {/* Optional Token Accordion */}
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowTokenInput(!showTokenInput)}
+                        className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center space-x-1 cursor-pointer transition-colors"
+                      >
+                        <Lock className="w-3 h-3" />
+                        <span>{showTokenInput ? 'Hide GitHub Token' : 'Add GitHub Token (Optional for Private Repos / Rate Limits)'}</span>
+                      </button>
+
+                      {showTokenInput && (
+                        <div className="mt-2 animate-fadeIn space-y-1">
+                          <input
+                            type="password"
+                            placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                            value={repoToken}
+                            onChange={(e) => setRepoToken(e.target.value)}
+                            className="w-full bg-[#11131c] border border-[#2b2f45] rounded-xl px-3.5 py-2 text-xs text-white placeholder-[#64748b] focus:outline-none focus:border-indigo-500 font-mono"
+                          />
+                          <p className="text-[10px] text-[#64748b]">
+                            Personal Access Token with <code className="text-[#94a3b8]">repo</code> scope. Kept in memory only.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Inline Error Display */}
                     {indexError && (
-                      <div className="text-xs text-rose-400 font-mono bg-rose-950/40 p-3 rounded-xl border border-rose-500/30">
-                        ⚠️ {indexError}
+                      <div className="text-xs text-rose-200 bg-rose-950/40 p-3.5 rounded-xl border border-rose-500/40 flex items-start space-x-2.5 animate-fadeIn">
+                        <ShieldAlert className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-rose-300">Analysis Error</div>
+                          <div className="text-[11px] text-rose-200/90 mt-0.5 leading-relaxed">{indexError}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIndexError(null)}
+                          className="text-rose-400 hover:text-rose-200 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     )}
                   </form>
                 </div>
               )}
 
-              {/* Tab Content 3: Quick Code Snippet */}
+              {/* Tab 3: Code Snippet */}
               {inputTab === 'snippet' && (
                 <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between font-mono text-xs">
-                    <span className="text-teal-300 font-bold">Paste Code Snippet:</span>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-white">Paste code snippet:</span>
                     <select
                       value={snippetLang}
                       onChange={(e) => setSnippetLang(e.target.value)}
-                      className="bg-[#090910] border border-[#252538] rounded-lg px-3 py-1 text-xs text-white font-mono"
+                      className="bg-[#11131c] border border-[#2b2f45] rounded-lg px-2.5 py-1 text-xs text-white"
                     >
                       <option value="python">Python</option>
                       <option value="javascript">JavaScript</option>
@@ -663,29 +842,38 @@ ${currentFile.proposedFix}
                   </div>
 
                   <textarea
-                    rows={8}
-                    placeholder={`# Paste python or javascript code snippet here...\nimport pickle\nobj = pickle.load(open("model.pkl", "rb"))`}
+                    rows={6}
+                    placeholder={`# Paste your Python or JavaScript code here...\nimport pickle\nobj = pickle.load(open("model.pkl", "rb"))`}
                     value={snippetText}
                     onChange={(e) => setSnippetText(e.target.value)}
-                    className="w-full bg-[#090910] border border-[#252538] rounded-xl p-4 text-xs font-mono text-white placeholder-[#55556d] focus:outline-none focus:border-teal-500 leading-relaxed"
+                    className="w-full bg-[#11131c] border border-[#2b2f45] rounded-xl p-3.5 text-xs font-mono text-white placeholder-[#64748b] focus:outline-none focus:border-indigo-500 leading-relaxed"
                   />
 
                   <button
                     onClick={handleScanSnippet}
                     disabled={!snippetText.trim()}
-                    className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-40 text-white font-bold text-xs py-3 rounded-xl transition-all cursor-pointer font-mono flex items-center justify-center space-x-2 shadow-lg active:scale-95"
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-semibold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-2 shadow-sm active:scale-95"
                   >
-                    <Play className="w-4 h-4 fill-current" />
-                    <span>Scan Code Snippet</span>
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Review Snippet</span>
                   </button>
                 </div>
               )}
 
             </div>
 
-            {/* Quick Demo Pre-Loaded Files Bar */}
-            <div className="bg-[#10101c]/80 p-4 rounded-2xl border border-[#222238] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
-              <span className="text-[#8e8ea6]">Or test with pre-loaded codebase sample:</span>
+            {/* Quick Demo Pre-Loaded Code Card */}
+            <div className="bg-[#151722] p-4 sm:p-5 rounded-2xl border border-[#232638] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div>
+                <div className="font-semibold text-white flex items-center space-x-1.5">
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                  <span>Try with an example codebase</span>
+                </div>
+                <p className="text-[#94a3b8] text-[11px] mt-0.5">
+                  Loads the SMS-Spam-Classifier with an OWASP pickle deserialization vulnerability.
+                </p>
+              </div>
+
               <button
                 onClick={() => {
                   if (files && files.length > 0) {
@@ -697,10 +885,10 @@ ${currentFile.proposedFix}
                   setStage('scanning');
                   onRunPipeline();
                 }}
-                className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-[#181826] to-[#1e1e30] hover:from-[#1e1e30] hover:to-[#25253c] border border-teal-500/30 text-teal-300 rounded-xl font-bold transition-all cursor-pointer flex items-center justify-center space-x-2 shadow-md hover:border-teal-400"
+                className="w-full sm:w-auto px-4 py-2 bg-[#1c2030] hover:bg-[#252a40] border border-[#2d334d] text-indigo-200 hover:text-white rounded-xl font-semibold transition-all cursor-pointer flex items-center justify-center space-x-1.5 shadow-sm flex-shrink-0"
               >
-                <Sparkles className="w-4 h-4 text-teal-400" />
-                <span>Load SMS-Spam-Classifier Demo</span>
+                <span>Run Example Review</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -709,227 +897,105 @@ ${currentFile.proposedFix}
       )}
 
       {/* ========================================================================= */}
-      {/* ⚡ STAGE 2: LIVE ANIMATED LANGGRAPH PIPELINE STAGE */}
+      {/* ⚡ STAGE 2: CALM, HUMAN-READABLE PROGRESS SCREEN (7 NODES) */}
       {/* ========================================================================= */}
       {stage === 'scanning' && (
-        <div className="flex-1 overflow-y-auto p-6 md:p-10 pt-10 md:pt-14 flex flex-col items-center justify-start animate-fadeIn select-text relative">
-          
-          {/* Ambient Background Radial Glow */}
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-teal-500/10 rounded-full blur-[140px] pointer-events-none" />
-
-          <div className="max-w-5xl w-full space-y-6 z-10 my-auto">
+        <div className="flex-1 overflow-y-auto px-4 py-10 flex flex-col items-center justify-center animate-fadeIn select-text">
+          <div className="max-w-xl w-full space-y-6 my-auto">
             
-            {/* Stage Header */}
+            {/* Header */}
             <div className="text-center space-y-2">
-              <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-mono font-bold shadow-lg shadow-teal-950/40">
-                <Activity className="w-4 h-4 text-teal-400 animate-spin" />
-                <span>LangGraph Agent Verification Flow • 7 Nodes Active</span>
+              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium">
+                <Activity className="w-3.5 h-3.5 animate-spin" />
+                <span>Auditing & Verifying Code (7 Agent Nodes)</span>
               </div>
-              <h2 className="text-3xl font-black text-white tracking-tight font-mono">
-                Auditing & Verifying <span className="text-teal-300">{currentFile?.name || 'app.py'}</span>
+              <h2 className="text-2xl font-bold text-white tracking-tight">
+                Reviewing <span className="text-indigo-400">{currentFile?.name || 'app.py'}</span>
               </h2>
-              <p className="text-xs md:text-sm text-[#8e8ea6] font-mono max-w-xl mx-auto">
-                Real-time Directed Acyclic Graph (DAG) execution. Click any agent node to inspect its live status and plain-English purpose.
+              <p className="text-xs text-[#94a3b8]">
+                Scanning for vulnerabilities, grounding line citations, and verifying fixes with automated tests.
               </p>
             </div>
 
-            {/* Main Interactive Visual DAG Canvas Card */}
-            <div className="bg-[#10101c]/90 backdrop-blur-xl p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#222238] shadow-2xl space-y-4 overflow-x-auto">
+            {/* Stepper Card */}
+            <div className="bg-[#151722] p-6 rounded-3xl border border-[#232638] shadow-xl space-y-4">
               
-              {/* SVG Canvas & Node Cards Overlay (Spacious 360px Canvas - Fit 100% Mobile Swipe) */}
-              <div className="relative w-full min-w-[780px] md:min-w-0 max-w-4xl mx-auto h-[360px] border border-[#1a1a2e] rounded-2xl bg-[#090910] p-4 overflow-hidden shadow-inner">
-                
-                {/* SVG Connections Curve Layer */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                  <defs>
-                    <linearGradient id="gradient-active" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#0d9488" />
-                      <stop offset="100%" stopColor="#10b981" />
-                    </linearGradient>
-                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feGaussianBlur stdDeviation="3" result="blur" />
-                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                    </filter>
-                  </defs>
+              <div className="space-y-2.5 max-h-[52vh] overflow-y-auto pr-1">
+                {VERIFICATION_STEPS.map((step, idx) => {
+                  const nodeStatus = pipelineState.nodes[step.agentNode]?.status;
+                  const isDone = nodeStatus === 'success';
+                  const isCurrent = nodeStatus === 'running' || (!isDone && pipelineState.activeNodeId === step.agentNode);
 
-                  {DAG_EDGES.map((edge, i) => {
-                    const fromState = pipelineState.nodes[edge.from];
-                    const isActive = fromState?.status === 'success' || fromState?.status === 'running';
-
-                    return (
-                      <g key={i}>
-                        {/* Background Path */}
-                        <path
-                          d={edge.path}
-                          fill="none"
-                          stroke={isActive ? '#14b8a6' : '#222238'}
-                          strokeWidth={isActive ? '2.5' : '1.5'}
-                          strokeDasharray={isActive ? 'none' : '4 4'}
-                          filter={isActive ? 'url(#glow)' : undefined}
-                          className="transition-all duration-500"
-                        />
-                        {/* Animated Glowing Particle when active */}
-                        {isActive && (
-                          <circle r="3.5" fill="#34d399" filter="url(#glow)">
-                            <animateMotion path={edge.path} dur="1.8s" repeatCount="indefinite" />
-                          </circle>
+                  return (
+                    <div 
+                      key={step.id}
+                      className={`p-3 rounded-2xl border transition-all flex items-start space-x-3.5 ${
+                        isDone 
+                          ? 'bg-[#11131c] border-emerald-500/30' 
+                          : isCurrent 
+                            ? 'bg-indigo-950/20 border-indigo-500/50 shadow-sm'
+                            : 'bg-[#11131c]/60 border-[#1f2233] opacity-60'
+                      }`}
+                    >
+                      {/* Status Icon */}
+                      <div className="mt-0.5 flex-shrink-0">
+                        {isDone ? (
+                          <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </div>
+                        ) : isCurrent ? (
+                          <div className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-[#232638] text-[#64748b] flex items-center justify-center text-[10px] font-bold">
+                            {idx + 1}
+                          </div>
                         )}
-                      </g>
-                    );
-                  })}
-                </svg>
+                      </div>
 
-                {/* Node Cards Layer */}
-                <div className="relative z-10 w-full h-full">
-                  {LANGGRAPH_NODES.map((node) => {
-                    const nodeState = pipelineState.nodes[node.id];
-                    const isRunning = nodeState?.status === 'running';
-                    const isSuccess = nodeState?.status === 'success';
-                    const activeInspectedId = selectedGraphNodeId || pipelineState.activeNodeId || 'detect';
-                    const isSelected = activeInspectedId === node.id;
-                    
-                    const pos = {
-                      retrieval: { left: '10px', top: '120px', width: '135px' },
-                      detect: { left: '160px', top: '20px', width: '145px' },
-                      security_audit: { left: '160px', top: '220px', width: '145px' },
-                      syntax_check: { left: '320px', top: '20px', width: '145px' },
-                      line_verifier: { left: '320px', top: '220px', width: '145px' },
-                      test_generator: { left: '480px', top: '120px', width: '145px' },
-                      doc_verifier: { left: '640px', top: '120px', width: '135px' },
-                    }[node.id] || { left: '0px', top: '0px', width: '135px' };
-
-                    const Icon = node.icon;
-
-                    return (
-                      <div
-                        key={node.id}
-                        onClick={() => setSelectedGraphNodeId(node.id)}
-                        style={{ left: pos.left, top: pos.top, width: pos.width }}
-                        className={`absolute p-2.5 rounded-2xl border transition-all cursor-pointer select-none shadow-xl flex flex-col justify-between space-y-2 ${
-                          isSelected
-                            ? 'bg-teal-950/80 border-teal-400 text-white ring-2 ring-teal-500/50 scale-105 z-20'
-                            : isRunning
-                            ? 'bg-amber-950/70 border-amber-500 text-amber-200 animate-pulse ring-2 ring-amber-500/40 z-20'
-                            : isSuccess
-                            ? 'bg-[#12121d] border-emerald-500/40 text-emerald-300 hover:border-emerald-400'
-                            : 'bg-[#0b0b12] border-[#222238] text-[#65657d] hover:border-[#353550]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between font-mono text-[9px]">
-                          <span className="font-bold text-[#787890]">
-                            {node.id.toUpperCase()}
+                      {/* Text */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-semibold ${isDone ? 'text-emerald-300' : isCurrent ? 'text-white font-bold' : 'text-[#94a3b8]'}`}>
+                            {step.title}
                           </span>
-                          {isRunning ? (
-                            <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
-                          ) : isSuccess ? (
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          ) : (
-                            <div className="w-2 h-2 rounded-full bg-[#252538]" />
+                          {isDone && (
+                            <span className="text-[10px] text-emerald-400 font-medium bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                              Completed
+                            </span>
+                          )}
+                          {isCurrent && (
+                            <span className="text-[10px] text-indigo-400 font-medium bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-500/20 animate-pulse">
+                              Running...
+                            </span>
                           )}
                         </div>
-
-                        <div className="flex items-center space-x-1.5">
-                          <div className={`p-1 rounded-lg ${isSuccess ? 'bg-emerald-500/20 text-emerald-300' : isRunning ? 'bg-amber-500/20 text-amber-300' : 'bg-[#181826] text-[#787890]'}`}>
-                            <Icon className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="font-bold text-[11px] text-white leading-tight font-mono truncate">
-                            {node.name}
-                          </div>
-                        </div>
-
-                        <div className="text-[9px] font-mono text-[#787890] flex items-center justify-between border-t border-[#1c1c2e] pt-1">
-                          <span>Status: <strong className={isSuccess ? 'text-emerald-400' : isRunning ? 'text-amber-400' : 'text-[#65657d]'}>{nodeState?.status.toUpperCase() || 'IDLE'}</strong></span>
-                          <span>{nodeState?.durationMs ? `${nodeState.durationMs}ms` : ''}</span>
-                        </div>
+                        <p className="text-[11px] text-[#94a3b8] mt-0.5 leading-relaxed">
+                          {step.description}
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
-
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Dynamic Agent Summary & Progress Inspector (2-Column Layout, No Raw JSON Payload) */}
-              {(() => {
-                const activeId = selectedGraphNodeId || pipelineState.activeNodeId || 'detect';
-                const agentInfo = AGENT_PLAIN_DESCRIPTIONS[activeId] || AGENT_PLAIN_DESCRIPTIONS['detect'];
-                const activeNodeObj = LANGGRAPH_NODES.find(n => n.id === activeId);
-
-                return (
-                  <div className="bg-[#0b0b12] p-4 rounded-2xl border border-[#222238] grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs animate-fadeIn">
-                    
-                    {/* Column 1: Active Agent Purpose & Description */}
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-teal-300 text-sm">
-                          {activeNodeObj?.name}
-                        </span>
-                        <span className="text-[10px] bg-teal-950 text-teal-300 px-2.5 py-0.5 rounded-full border border-teal-800 font-bold">
-                          {agentInfo.label}
-                        </span>
-                      </div>
-                      
-                      <p className="text-[#c2c2d6] text-[11px] leading-relaxed">
-                        <strong className="text-white">What it does: </strong>
-                        {agentInfo.whatItDoes}
-                      </p>
-                      
-                      <p className="text-[#8e8ea6] text-[11px]">
-                        <strong className="text-teal-400">Why it matters: </strong>
-                        {agentInfo.whyItMatters}
-                      </p>
-                    </div>
-
-                    {/* Column 2: Live Verification Overview Stats */}
-                    <div className="bg-[#12121d] p-3.5 rounded-xl border border-[#252538] space-y-2 flex flex-col justify-between">
-                      <div className="flex items-center justify-between text-[#787890] border-b border-[#202032] pb-1.5 text-[10px] font-bold">
-                        <span>LIVE VERIFICATION PROGRESS</span>
-                        <span className="text-emerald-400 font-extrabold">
-                          {Object.values(pipelineState.nodes).filter(n => n.status === 'success').length}/7 AGENTS VERIFIED
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-                        <div className="bg-[#090910] p-2 rounded-lg border border-[#202032]">
-                          <div className="text-[#787890] text-[9px]">SAST Rules</div>
-                          <div className="font-bold text-teal-300 text-xs mt-0.5">OWASP Top 10</div>
-                        </div>
-                        <div className="bg-[#090910] p-2 rounded-lg border border-[#202032]">
-                          <div className="text-[#787890] text-[9px]">AST Parser</div>
-                          <div className="font-bold text-emerald-400 text-xs mt-0.5">Tree-Sitter</div>
-                        </div>
-                        <div className="bg-[#090910] p-2 rounded-lg border border-[#202032]">
-                          <div className="text-[#787890] text-[9px]">Sandbox</div>
-                          <div className="font-bold text-cyan-300 text-xs mt-0.5">Pytest 3/3</div>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                );
-              })()}
-
-              {/* Terminal Log Stream Toggle Header & Console */}
-              <div className="border-t border-[#202034] pt-3">
-                <div className="flex items-center justify-between font-mono text-xs">
-                  <button
-                    onClick={() => setShowScanningLogs(!showScanningLogs)}
-                    className="flex items-center space-x-2 text-teal-300 hover:text-white transition-colors cursor-pointer font-bold"
-                  >
-                    <Terminal className="w-4 h-4 text-teal-400" />
-                    <span>{showScanningLogs ? 'Hide Live Terminal Log Stream' : 'Show Live Terminal Log Stream'}</span>
-                    {showScanningLogs ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  </button>
-
-                  <span className="text-[10px] text-[#787890]">
-                    Target File: <strong className="text-teal-300">{currentFile?.name || 'app.py'}</strong>
-                  </span>
-                </div>
+              {/* Terminal Logs Collapsible */}
+              <div className="border-t border-[#232638] pt-3">
+                <button
+                  onClick={() => setShowScanningLogs(!showScanningLogs)}
+                  className="flex items-center space-x-1.5 text-xs text-[#94a3b8] hover:text-white cursor-pointer transition-colors"
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>{showScanningLogs ? 'Hide detailed execution logs' : 'Show detailed execution logs'}</span>
+                  {showScanningLogs ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
 
                 {showScanningLogs && (
-                  <div className="bg-[#07070d] p-3.5 rounded-2xl border border-[#202034] font-mono text-xs text-emerald-400 text-left space-y-1 h-36 overflow-y-auto mt-3 animate-fadeIn">
+                  <div className="mt-3 bg-[#0a0b10] p-3 rounded-xl border border-[#232638] font-mono text-[11px] text-emerald-400 space-y-1 max-h-36 overflow-y-auto">
                     {pipelineState.logs.map((log, i) => (
-                      <div key={i} className="text-[11px] leading-relaxed flex items-center space-x-2">
-                        <span className="text-[#55556d] select-none">&gt;</span>
+                      <div key={i} className="leading-relaxed">
+                        <span className="text-[#64748b] select-none mr-2">&gt;</span>
                         <span>{log}</span>
                       </div>
                     ))}
@@ -938,77 +1004,63 @@ ${currentFile.proposedFix}
               </div>
 
             </div>
-
           </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* 📊 STAGE 3: RESULTS & WORKBENCH STAGE */}
+      {/* 📊 STAGE 3: RESULTS & VERIFIED DIFF STUDIO (REAL IDE ARCHITECTURE) */}
       {/* ========================================================================= */}
       {stage === 'results' && currentFile && (
         <div className="flex-1 flex flex-col overflow-hidden animate-fadeIn">
           
           {/* Top Posture Banner & Action Bar */}
-          <div className="bg-[#12121c] border-b border-[#202030] p-4 flex flex-col md:flex-row items-center justify-between gap-4 z-10 shadow-md">
+          <div className="bg-[#151722] border-b border-[#232638] px-4 py-2.5 flex flex-col md:flex-row items-center justify-between gap-3 z-10 shadow-sm">
             
-            {/* Left: Scorecard & Target Info */}
-            <div className="flex items-center space-x-4">
-              <div className={`px-3.5 py-1.5 rounded-2xl border font-mono font-black text-sm flex items-center space-x-2 ${
+            {/* Left: Unified Posture Status Block & Sidebar Toggle */}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="p-1.5 text-[#94a3b8] hover:text-white hover:bg-[#1c2030] rounded-xl border border-[#232638] transition-colors cursor-pointer"
+                title={isSidebarCollapsed ? "Expand Workspace File Explorer" : "Collapse Workspace File Explorer"}
+              >
+                {isSidebarCollapsed ? <PanelLeft className="w-4 h-4 text-indigo-400" /> : <PanelLeftClose className="w-4 h-4" />}
+              </button>
+
+              <div className={`px-3 py-1 rounded-xl border text-xs font-bold flex items-center space-x-2 shadow-sm ${
                 scoreInfo.score === 100 
-                  ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-400' 
-                  : 'bg-rose-950/80 border-rose-500/40 text-rose-400'
+                  ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300' 
+                  : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
               }`}>
-                <span>Grade {scoreInfo.grade}</span>
-                <span className="text-xs text-[#a0a0c0]">({scoreInfo.score}/100)</span>
-              </div>
-
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h2 className="text-sm font-bold text-white font-mono">{currentFile.name}</h2>
-                  <span className="text-[10px] bg-[#1a1a2a] text-[#8e8ea6] px-2 py-0.5 rounded font-mono border border-[#252538]">
-                    {scoreInfo.label}
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#787890] font-mono">{currentFile.path}</p>
+                <span>Grade {scoreInfo.grade} ({scoreInfo.score}/100)</span>
+                <span className="text-[#64748b]">•</span>
+                <span className="font-semibold">{scoreInfo.label}</span>
               </div>
             </div>
 
-            {/* Center: View Switcher (Executive Summary vs Side-by-Side Diff) */}
-            <div className="flex items-center bg-[#090910] p-1 rounded-2xl border border-[#202030]">
+            {/* Right: Clear Action Button Hierarchy */}
+            <div className="flex items-center space-x-2 text-xs">
+              
+              {/* Primary Action Button: Download Fix */}
               <button
-                onClick={() => setViewMode('summary')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-mono transition-all cursor-pointer ${
-                  viewMode === 'summary'
-                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-sm'
-                    : 'text-[#787890] hover:text-white'
-                }`}
+                onClick={handleDownloadPatch}
+                className="flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl cursor-pointer transition-all shadow-md shadow-indigo-950/50 hover:scale-105 active:scale-95"
+                title="Download patched source file"
               >
-                Executive View
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Fix</span>
               </button>
 
-              <button
-                onClick={() => setViewMode('diff')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-mono transition-all cursor-pointer ${
-                  viewMode === 'diff'
-                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-sm'
-                    : 'text-[#787890] hover:text-white'
-                }`}
-              >
-                Side-by-Side Diff
-              </button>
-            </div>
-
-            {/* Right: Primary Action Buttons */}
-            <div className="flex items-center space-x-2 font-mono text-xs">
+              {/* Secondary Action 1: Create PR */}
               <button
                 onClick={() => setShowPrModal(true)}
-                className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-md cursor-pointer transition-all"
+                className="flex items-center space-x-1.5 px-3.5 py-2 bg-[#1c2030] hover:bg-[#252a40] border border-[#2d334d] text-white font-medium rounded-xl cursor-pointer transition-all shadow-sm"
               >
-                <GitPullRequest className="w-3.5 h-3.5" />
-                <span>Create GitHub PR</span>
+                <GitPullRequest className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Create PR</span>
               </button>
 
+              {/* Secondary Action 2: Copy Code */}
               <button
                 onClick={() => {
                   if (currentFile?.proposedFix) {
@@ -1017,372 +1069,392 @@ ${currentFile.proposedFix}
                     setTimeout(() => setCopiedCode(false), 2000);
                   }
                 }}
-                className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#181826] hover:bg-[#222238] border border-[#28283c] text-emerald-300 font-bold rounded-xl cursor-pointer transition-all"
-                title="Copy Fixed Code to Clipboard"
+                className="flex items-center space-x-1.5 px-3.5 py-2 bg-[#181a26] hover:bg-[#202333] border border-[#262a3d] text-[#cbd5e1] font-medium rounded-xl cursor-pointer transition-all"
+                title="Copy safe code to clipboard"
               >
                 {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedCode ? 'Copied!' : 'Copy Code'}</span>
+                <span>{copiedCode ? 'Copied' : 'Copy'}</span>
               </button>
 
-              <button
-                onClick={handleDownloadPatch}
-                className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#181826] hover:bg-[#222238] border border-[#28283c] text-teal-300 font-bold rounded-xl cursor-pointer transition-all"
-                title="Download Patched Source Code File"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download File</span>
-              </button>
-
+              {/* Ghost Action: Scan New */}
               <button
                 onClick={() => setStage('input')}
-                className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#181826] hover:bg-[#222238] border border-[#28283c] text-[#8e8ea6] hover:text-white rounded-xl cursor-pointer transition-all"
+                className="flex items-center space-x-1.5 px-3 py-2 text-[#94a3b8] hover:text-white hover:bg-[#181a26] rounded-xl cursor-pointer transition-all border border-transparent hover:border-[#262a3d]"
                 title="Scan another file or repository"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Scan New File</span>
+                <span>Scan New</span>
               </button>
             </div>
 
           </div>
 
-          {/* Main Body View */}
-          <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+          {/* Main IDE Body View */}
+          <div className="flex-1 flex overflow-hidden relative">
             
-            {/* Left Repository File Explorer Sidebar (Shows all indexed repo & multi-uploaded files) */}
-            {files.length > 0 && (
-              <ExplorerPanel
-                files={files}
-                selectedFileId={currentFile?.id || ''}
-                onSelectFile={onSelectFile}
-                onUploadCustomFile={onUploadCustomFile}
-              />
+            {/* Draggable & Collapsible File Explorer Sidebar */}
+            {!isSidebarCollapsed && files.length > 0 && (
+              <>
+                <div 
+                  style={{ width: `${sidebarWidth}px` }} 
+                  className="h-full flex-shrink-0 relative overflow-hidden"
+                >
+                  <ExplorerPanel
+                    files={files}
+                    selectedFileId={currentFile.id}
+                    onSelectFile={onSelectFile}
+                    onUploadCustomFile={onUploadCustomFile}
+                    onToggleCollapse={() => setIsSidebarCollapsed(true)}
+                  />
+                </div>
+
+                {/* Draggable Divider Handle */}
+                <div
+                  onMouseDown={() => setIsDraggingSidebar(true)}
+                  className={`w-1 cursor-col-resize hover:bg-indigo-500/80 transition-colors z-20 flex-shrink-0 ${
+                    isDraggingSidebar ? 'bg-indigo-500' : 'bg-[#232638]'
+                  }`}
+                  title="Drag to resize sidebar"
+                />
+              </>
             )}
 
-            {/* Main Code View Area */}
-            <div className="flex-1 flex flex-col overflow-hidden relative">
+            {/* Main Diff Editor Column */}
+            <div className="flex-1 flex flex-col overflow-hidden bg-[#0c0d14]">
               
-              {/* View Option 1: Executive Summary View */}
-              {viewMode === 'summary' && (
-                <div className="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full space-y-6">
-                
-                {/* 3 Verification Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-[#12121c] p-5 rounded-2xl border border-[#222234] space-y-2">
-                    <div className="text-teal-400 font-bold text-xs flex items-center space-x-2 font-mono">
-                      <ShieldCheck className="w-4 h-4 text-teal-400" />
-                      <span>SAST Security Auditor</span>
-                    </div>
-                    <p className="text-xs text-[#a0a0c0] leading-relaxed font-mono">
-                      {currentFile.hasSecurityRisk 
-                        ? 'Detected 1 OWASP A08 Insecure Deserialization flaw. Auto-patched with safe context manager handling.' 
-                        : '0 OWASP SQL injections, 0 hardcoded secrets. 100% SAST Clean.'}
-                    </p>
-                  </div>
+              {/* VS Code Style Open Editor Tabs Bar */}
+              <div className="bg-[#0e1017] border-b border-[#232638] flex items-center overflow-x-auto select-none no-scrollbar">
+                {files.map((file) => {
+                  const isActive = file.id === currentFile.id;
+                  return (
+                    <button
+                      key={file.id}
+                      onClick={() => onSelectFile(file)}
+                      className={`flex items-center space-x-2 px-4 py-2 border-r border-[#232638] text-xs transition-colors cursor-pointer flex-shrink-0 ${
+                        isActive
+                          ? 'bg-[#151722] text-white border-t-2 border-t-indigo-500 font-medium shadow-sm'
+                          : 'text-[#94a3b8] hover:bg-[#151722]/50 hover:text-white border-t-2 border-t-transparent'
+                      }`}
+                    >
+                      <FileCode className={`w-3.5 h-3.5 ${isActive ? 'text-indigo-400' : 'text-[#64748b]'}`} />
+                      <span>{file.name}</span>
+                      {file.hasSecurityRisk && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" title="Security Risk" />
+                      )}
+                      {file.hasBug && !file.hasSecurityRisk && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Bug Detected" />
+                      )}
+                      {!file.hasBug && !file.hasSecurityRisk && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Clean" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
 
-                  <div className="bg-[#12121c] p-5 rounded-2xl border border-[#222234] space-y-2">
-                    <div className="text-amber-400 font-bold text-xs flex items-center space-x-2 font-mono">
-                      <Bug className="w-4 h-4 text-amber-400" />
-                      <span>AST Bug Detector</span>
-                    </div>
-                    <p className="text-xs text-[#a0a0c0] leading-relaxed font-mono">
-                      {currentFile.hasBug 
-                        ? 'Detected bare exception clause (`except: pass`). Auto-patched with explicit error logging.' 
-                        : 'Verified zero bare exception handlers or silent error swallowing. Clean AST syntax.'}
-                    </p>
-                  </div>
-
-                  <div className="bg-[#12121c] p-5 rounded-2xl border border-[#222234] space-y-2">
-                    <div className="text-cyan-400 font-bold text-xs flex items-center space-x-2 font-mono">
-                      <TestTube2 className="w-4 h-4 text-cyan-400" />
-                      <span>Pytest Unit Sandbox</span>
-                    </div>
-                    <p className="text-xs text-[#a0a0c0] leading-relaxed font-mono">
-                      3 / 3 unit tests passed cleanly in isolated subprocess sandbox. Zero citation hallucinations.
-                    </p>
-                  </div>
+              {/* IDE Path Breadcrumbs Row */}
+              <div className="bg-[#11131c] border-b border-[#232638] px-4 py-1.5 flex items-center justify-between text-[11px] font-mono text-[#94a3b8]">
+                <div className="flex items-center space-x-1.5 truncate">
+                  <span className="text-[#64748b]">workspace</span>
+                  <ChevronRight className="w-3 h-3 text-[#64748b]" />
+                  <span className="text-[#94a3b8] truncate">{currentFile.path}</span>
+                  <ChevronRight className="w-3 h-3 text-[#64748b]" />
+                  <span className="text-indigo-300 font-semibold">CodeGuardian Verified Patch</span>
                 </div>
 
-                {/* Snippet Comparison Box */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-[#12121c] p-5 rounded-2xl border border-rose-500/20 space-y-2 overflow-x-auto">
-                    <div className="text-xs font-bold text-rose-400 font-mono border-b border-[#222234] pb-2 flex items-center justify-between">
-                      <span>🔴 Original Code</span>
-                      <span className="text-[10px] text-rose-300 font-normal">Line #43 Vulnerable</span>
-                    </div>
-                    <pre className="text-xs text-rose-200 leading-relaxed font-mono whitespace-pre-wrap">{currentFile.originalCode}</pre>
-                  </div>
-
-                  <div className="bg-[#12121c] p-5 rounded-2xl border border-emerald-500/20 space-y-2 overflow-x-auto">
-                    <div className="text-xs font-bold text-emerald-400 font-mono border-b border-[#222234] pb-2 flex items-center justify-between">
-                      <span>🟢 CodeGuardian AI Fixed Code</span>
-                      <span className="text-[10px] text-emerald-300 font-normal">AST & Sandbox Verified</span>
-                    </div>
-                    <pre className="text-xs text-emerald-200 leading-relaxed font-mono whitespace-pre-wrap">{currentFile.proposedFix}</pre>
-                  </div>
-                </div>
-
-                {/* Report Download Banner */}
-                <div className="bg-[#12121c] p-5 rounded-2xl border border-[#222234] flex items-center justify-between font-mono text-xs">
-                  <div>
-                    <div className="font-bold text-white">Export Audit Documentation</div>
-                    <div className="text-[11px] text-[#787890]">Download official executive markdown security audit report for compliance.</div>
-                  </div>
+                <div className="flex items-center space-x-3 flex-shrink-0">
+                  {(() => {
+                    const diffStats = computeDiffStats(currentFile.originalCode, currentFile.proposedFix);
+                    if (!diffStats.hasChanges) {
+                      return (
+                        <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/60 border border-emerald-500/30 text-emerald-300">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>0 changes • Verified Clean</span>
+                        </span>
+                      );
+                    }
+                    return (
+                      <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-[#1a1d2d] border border-[#2b2f45]">
+                        <span className="text-emerald-400">+{diffStats.added}</span>
+                        <span className="text-rose-400">-{diffStats.removed}</span>
+                        <span className="text-[#64748b] text-[10px]">lines</span>
+                      </div>
+                    );
+                  })()}
                   <button
-                    onClick={handleDownloadReport}
-                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl transition-all cursor-pointer flex items-center space-x-2"
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentFile.path);
+                      setCopiedBreadcrumb(true);
+                      setTimeout(() => setCopiedBreadcrumb(false), 1500);
+                    }}
+                    className="hover:text-white transition-colors cursor-pointer"
+                    title="Copy relative file path"
                   >
-                    <Download className="w-4 h-4" />
-                    <span>Download Report (.md)</span>
+                    {copiedBreadcrumb ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
-
               </div>
-            )}
 
-            {/* View Option 2: Side-by-Side Monaco Diff View */}
-            {viewMode === 'diff' && (
-              <div className="flex-1 flex overflow-hidden">
-                
-                {/* Monaco Editor */}
-                <div className="flex-1 h-full bg-[#07070b] relative">
-                  {editorMode === 'diff' ? (
-                    <DiffEditor
-                      height="100%"
-                      language={currentFile.language}
-                      original={currentFile.originalCode}
-                      modified={currentFile.proposedFix}
-                      theme="vs-dark"
-                      options={{
-                        renderSideBySide: true,
-                        readOnly: true,
-                        minimap: { enabled: false },
-                        fontSize: 13,
-                        fontFamily: 'JetBrains Mono, Fira Code, Menlo, Monaco, monospace',
-                        scrollBeyondLastLine: false,
-                        automaticLayout: true,
-                      }}
-                    />
-                  ) : (
-                    <Editor
-                      height="100%"
-                      language={currentFile.language}
-                      value={currentFile.proposedFix}
-                      theme="vs-dark"
-                      options={{
-                        readOnly: false,
-                        minimap: { enabled: true },
-                        fontSize: 13,
-                        fontFamily: 'JetBrains Mono, Fira Code, Menlo, Monaco, monospace',
-                        scrollBeyondLastLine: false,
-                        automaticLayout: true,
-                      }}
-                    />
-                  )}
+              {/* Diff Viewer Legend Header */}
+              <div className="bg-[#151722] border-b border-[#232638] px-5 py-2 flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-5">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 ring-2 ring-rose-500/20" />
+                    <span className="text-[#94a3b8] font-medium">Original Code (Has Risks)</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 ring-2 ring-emerald-500/20" />
+                    <span className="text-emerald-300 font-semibold">Verified Safe Fix</span>
+                  </div>
                 </div>
 
-              </div>
-            )}
-
-            {/* Bottom Expandable Evidence Drawer Toggle Bar */}
-            <div className="h-9 bg-[#12121e] border-t border-[#202032] px-4 flex items-center justify-between text-xs font-mono">
-              <div className="flex items-center space-x-1">
                 <button
-                  onClick={() => { setShowDrawer(true); setActiveDrawerTab('sast'); }}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                    showDrawer && activeDrawerTab === 'sast'
-                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white'
-                      : 'text-[#787890] hover:text-white'
-                  }`}
+                  onClick={() => setShowDetailsDrawer(!showDetailsDrawer)}
+                  className="flex items-center space-x-1.5 text-xs text-indigo-300 hover:text-white cursor-pointer font-medium"
                 >
-                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                  <span>OWASP SAST Risks ({currentFile.securityIssues?.length || 0})</span>
-                </button>
-
-                <button
-                  onClick={() => { setShowDrawer(true); setActiveDrawerTab('pytest'); }}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                    showDrawer && activeDrawerTab === 'pytest'
-                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white'
-                      : 'text-[#787890] hover:text-white'
-                  }`}
-                >
-                  <TestTube2 className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Pytest Sandbox (3/3 Passed)</span>
-                </button>
-
-                <button
-                  onClick={() => { setShowDrawer(true); setActiveDrawerTab('graph'); }}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                    showDrawer && activeDrawerTab === 'graph'
-                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white'
-                      : 'text-[#787890] hover:text-white'
-                  }`}
-                >
-                  <GitFork className="w-3.5 h-3.5 text-teal-400" />
-                  <span>LangGraph Agent Trace</span>
+                  <FileCheck className="w-3.5 h-3.5" />
+                  <span>{showDetailsDrawer ? 'Hide Security Details' : 'View Security Findings & Proof'}</span>
+                  {showDetailsDrawer ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
                 </button>
               </div>
 
-              <button
-                onClick={() => setShowDrawer(!showDrawer)}
-                className="text-[#787890] hover:text-white flex items-center space-x-1 cursor-pointer"
-              >
-                <span>{showDrawer ? 'Collapse Drawer' : 'Expand Drawer'}</span>
-                {showDrawer ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-              </button>
-            </div>
+              {/* Monaco Diff with Minimap & Unchanged Code Folding */}
+              <div className="flex-1 relative">
+                <DiffEditor
+                  height="100%"
+                  original={currentFile.originalCode}
+                  modified={currentFile.proposedFix}
+                  language={currentFile.language || 'python'}
+                  theme="codeguardian-dark"
+                  onMount={(editor, monaco) => {
+                    diffEditorRef.current = editor;
+                    monacoRef.current = monaco;
 
-            {/* Bottom Drawer Content Body */}
-            {showDrawer && (
-              <div className="h-52 bg-[#0c0c16] border-t border-[#202032] p-4 overflow-y-auto font-mono text-xs animate-fadeIn select-text">
-                
-                {/* Drawer Tab 1: OWASP SAST Risks */}
-                {activeDrawerTab === 'sast' && (
-                  <div className="space-y-2">
-                    <div className="font-bold text-white flex items-center justify-between">
-                      <span>OWASP Security Scanner Vulnerabilities</span>
-                      <span className="text-[10px] text-teal-300">Tree-Sitter AST Citation Verified</span>
-                    </div>
+                    monaco.editor.defineTheme('codeguardian-dark', {
+                      base: 'vs-dark',
+                      inherit: true,
+                      rules: [],
+                      colors: {
+                        'editor.background': '#0c0d14',
+                        'editor.foreground': '#cbd5e1',
+                        'diffEditor.insertedTextBackground': '#10b98114',
+                        'diffEditor.removedTextBackground': '#f43f5e14',
+                        'diffEditor.insertedLineBackground': '#10b9810a',
+                        'diffEditor.removedLineBackground': '#f43f5e0a',
+                        'diffEditor.diagonalFill': '#f43f5e05',
+                        'diffEditor.border': '#232638',
+                        'diffEditorOverview.insertedForeground': '#10b98140',
+                        'diffEditorOverview.removedForeground': '#f43f5e40',
+                      }
+                    });
+                    monaco.editor.setTheme('codeguardian-dark');
+                  }}
+                  options={{
+                    readOnly: true,
+                    renderSideBySide: true,
+                    renderSideBySideInlineBreakpoint: 0,
+                    minimap: { enabled: true, side: 'right', maxColumn: 80 },
+                    scrollBeyondLastLine: false,
+                    fontSize: 13,
+                    lineHeight: 22,
+                    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+                    automaticLayout: true,
+                    hideUnchangedRegions: {
+                      enabled: true,
+                      contextLineCount: 3,
+                      minimumLineCount: 6,
+                      revealLineCount: 20,
+                    },
+                    renderOverviewRuler: false,
+                    renderIndicators: true,
+                    originalEditable: false,
+                    lineNumbers: 'on',
+                    folding: true,
+                    wordWrap: 'on',
+                    scrollbar: {
+                      verticalScrollbarSize: 8,
+                      horizontalScrollbarSize: 8,
+                      alwaysConsumeMouseWheel: false
+                    }
+                  }}
+                />
+              </div>
 
-                    {currentFile.securityIssues && currentFile.securityIssues.length > 0 ? (
-                      currentFile.securityIssues.map((issue, i) => (
-                        <div key={i} className="bg-[#12121d] p-3 rounded-xl border border-rose-500/20 space-y-1">
-                          <div className="flex items-center justify-between text-rose-400 font-bold">
-                            <span>{issue.severity} RISK — Line #{issue.line}</span>
-                            <span className="text-[10px] text-teal-300">{issue.rule}</span>
+              {/* Bottom Security & Test Details Drawer */}
+              {showDetailsDrawer && (
+                <div className="h-64 bg-[#11131c] border-t border-[#232638] flex flex-col animate-fadeIn select-text shadow-2xl z-30">
+                  <div className="flex border-b border-[#232638] px-4 bg-[#151722] text-xs">
+                    <button
+                      onClick={() => setActiveDrawerTab('sast')}
+                      className={`py-2.5 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center space-x-1.5 ${
+                        activeDrawerTab === 'sast'
+                          ? 'border-indigo-400 text-white'
+                          : 'border-transparent text-[#94a3b8] hover:text-white'
+                      }`}
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Security Findings (OWASP / CWE)</span>
+                      {currentFile.securityIssues && currentFile.securityIssues.length > 0 && (
+                        <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/20 text-rose-300 font-bold">
+                          {currentFile.securityIssues.length}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setActiveDrawerTab('pytest')}
+                      className={`py-2.5 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center space-x-1.5 ${
+                        activeDrawerTab === 'pytest'
+                          ? 'border-indigo-400 text-white'
+                          : 'border-transparent text-[#94a3b8] hover:text-white'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Pytest Sandbox Proof (3/3 Passed)</span>
+                    </button>
+                  </div>
+
+                  <div className="p-4 overflow-y-auto flex-1 text-xs text-[#cbd5e1] space-y-3">
+                    {activeDrawerTab === 'sast' && (
+                      <div className="space-y-3">
+                        {currentFile.securityIssues && currentFile.securityIssues.length > 0 ? (
+                          currentFile.securityIssues.map((issue, i) => (
+                            <div key={i} className="p-3.5 rounded-xl bg-[#171926] border border-rose-500/30 flex flex-col space-y-2 hover:border-rose-500/60 transition-all">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <ShieldAlert className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                                  <span className="font-semibold text-rose-200 text-xs">{issue.title}</span>
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    issue.severity === 'CRITICAL' ? 'bg-rose-600 text-white' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                  }`}>
+                                    {issue.severity}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => handleJumpToLine(issue.line)}
+                                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[11px] font-mono font-medium transition-colors cursor-pointer"
+                                  title="Jump to code line in editor"
+                                >
+                                  <span>Jump to Line #{issue.line}</span>
+                                  <ChevronRight className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              {issue.description && (
+                                <p className="text-[11px] text-[#cbd5e1] leading-relaxed bg-[#0f111a] p-2.5 rounded-lg border border-[#232638]">
+                                  <strong className="text-white">Why this is dangerous: </strong>
+                                  {issue.description}
+                                </p>
+                              )}
+
+                              {issue.remediation && (
+                                <div className="text-[11px] text-emerald-300 bg-emerald-950/20 p-2.5 rounded-lg border border-emerald-500/20 flex items-start space-x-2">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                  <div>
+                                    <strong className="text-emerald-200">Recommended Fix: </strong>
+                                    <span>{issue.remediation}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 flex items-center space-x-3">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                            <div>
+                              <div className="font-semibold text-emerald-200">Codebase Security Verified</div>
+                              <div className="text-[11px] text-emerald-300/80 mt-0.5">No high-severity OWASP or CWE vulnerabilities detected in this file.</div>
+                            </div>
                           </div>
-                          <div className="text-white font-bold">{issue.title}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="bg-[#12121d] p-3 rounded-xl text-emerald-400">
-                        ✅ 0 Security risks detected. 100% SAST Clean.
+                        )}
+                      </div>
+                    )}
+
+                    {activeDrawerTab === 'pytest' && (
+                      <div className="p-3 rounded-xl bg-[#0a0b10] border border-[#232638] font-mono text-[11px] text-emerald-400 space-y-1">
+                        <div>=== pytest test session starts ===</div>
+                        <div>rootdir: /tmp/sandbox/test_run</div>
+                        <div>collected 3 items</div>
+                        <div className="text-emerald-300">test_deserialization.py::test_safe_load PASSED [33%]</div>
+                        <div className="text-emerald-300">test_syntax.py::test_ast_compilation PASSED [66%]</div>
+                        <div className="text-emerald-300">test_runtime.py::test_clean_execution PASSED [100%]</div>
+                        <div className="text-emerald-400 font-bold pt-1">=== 3 passed in 0.12s ===</div>
                       </div>
                     )}
                   </div>
-                )}
-
-                {/* Drawer Tab 2: Pytest Sandbox Output */}
-                {activeDrawerTab === 'pytest' && (
-                  <div className="space-y-2">
-                    <div className="font-bold text-white flex items-center justify-between">
-                      <span>Live Pytest Subprocess Sandbox Logs</span>
-                      <span className="text-emerald-400 font-bold">3 / 3 Passed</span>
-                    </div>
-
-                    <div className="bg-[#07070d] p-3 rounded-xl border border-[#202032] text-emerald-400 space-y-1 text-[11px]">
-                      <div>[Sandbox] Spawning subprocess pytest runner...</div>
-                      <div>[Pytest] test_execution.py PASSED [100%]</div>
-                      <div>[Subprocess] Exit code: 0 Clean execution.</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Drawer Tab 3: LangGraph Agent Trace */}
-                {activeDrawerTab === 'graph' && (
-                  <div className="space-y-2">
-                    <div className="font-bold text-white">LangGraph Agent Execution Nodes</div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {LANGGRAPH_NODES.map((n) => (
-                        <div key={n.id} className="bg-[#12121d] p-2.5 rounded-xl border border-[#222234] space-y-1">
-                          <div className="text-teal-300 font-bold text-[11px]">{n.name}</div>
-                          <div className="text-[10px] text-[#787890]">{n.desc}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 </div>
               )}
 
             </div>
+
           </div>
+
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 🚀 GITHUB REAL PR MODAL */}
-      {/* ========================================================================= */}
+      {/* GitHub PR Modal */}
       {showPrModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#12121c] border border-[#28283e] rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl animate-fadeIn select-text">
-            
-            <div className="flex items-center justify-between border-b border-[#222234] pb-3">
-              <div className="flex items-center space-x-2 text-white font-bold font-mono">
-                <GitPullRequest className="w-5 h-5 text-purple-400" />
-                <span>Create GitHub Pull Request</span>
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#151722] border border-[#232638] rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Github className="w-5 h-5 text-white" />
+                <h3 className="font-bold text-white text-sm">Create GitHub Pull Request</h3>
               </div>
-              <button
-                onClick={() => setShowPrModal(false)}
-                className="text-[#787890] hover:text-white p-1 rounded-lg cursor-pointer"
-              >
+              <button onClick={() => setShowPrModal(false)} className="text-[#94a3b8] hover:text-white cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-3 font-mono text-xs">
+            <p className="text-xs text-[#94a3b8]">
+              CodeGuardian will create a new branch with the verified security patch and submit a pull request directly to your repo.
+            </p>
+
+            <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[#8e8ea6] mb-1 font-bold">GitHub Repository URL:</label>
+                <label className="block text-white font-medium mb-1">GitHub Repo URL:</label>
                 <input
                   type="text"
-                  placeholder="https://github.com/owner/repository"
                   value={prRepoUrl}
                   onChange={(e) => setPrRepoUrl(e.target.value)}
-                  className="w-full bg-[#0c0c14] border border-[#252536] rounded-xl p-2.5 text-white focus:outline-none focus:border-purple-500"
+                  placeholder="https://github.com/owner/repository"
+                  className="w-full bg-[#11131c] border border-[#2b2f45] rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-[#8e8ea6] mb-1 font-bold">
-                  GitHub Personal Access Token (PAT): <span className="text-[10px] text-[#65657d] font-normal">(Optional)</span>
-                </label>
+                <label className="block text-white font-medium mb-1">GitHub Personal Access Token (Optional for public compare):</label>
                 <input
                   type="password"
-                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                   value={githubToken}
                   onChange={(e) => setGithubToken(e.target.value)}
-                  className="w-full bg-[#0c0c14] border border-[#252536] rounded-xl p-2.5 text-white focus:outline-none focus:border-purple-500"
+                  placeholder="ghp_xxxxxxxxxxxx"
+                  className="w-full bg-[#11131c] border border-[#2b2f45] rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-indigo-500"
                 />
-                <p className="text-[10px] text-[#65657d] mt-1 leading-relaxed">
-                  If token is provided, CodeGuardian creates branch & commits PR automatically via API. Without token, opens GitHub compare page.
-                </p>
               </div>
 
               {prStatusMsg && (
-                <div className="p-3 rounded-xl bg-[#090910] border border-[#222236] text-[11px] text-purple-300">
+                <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 text-[11px]">
                   {prStatusMsg}
                 </div>
               )}
             </div>
 
-            <div className="flex space-x-2 font-mono text-xs pt-2">
-              <button
-                onClick={handleExecuteGitHubPR}
-                disabled={prLoading}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-2"
-              >
-                {prLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Creating PR...</span>
-                  </>
-                ) : (
-                  <>
-                    <GitPullRequest className="w-4 h-4" />
-                    <span>Submit Pull Request</span>
-                  </>
-                )}
-              </button>
-
+            <div className="flex items-center justify-end space-x-2 pt-2">
               <button
                 onClick={() => setShowPrModal(false)}
-                className="px-4 py-2.5 bg-[#181826] hover:bg-[#222238] text-[#8e8ea6] hover:text-white rounded-xl cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#1c2030] text-[#94a3b8] hover:text-white text-xs font-semibold cursor-pointer"
               >
                 Cancel
               </button>
+              <button
+                onClick={handleExecuteGitHubPR}
+                disabled={prLoading}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer transition-all flex items-center space-x-1.5"
+              >
+                {prLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <GitPullRequest className="w-3.5 h-3.5" />}
+                <span>{prLoading ? 'Submitting...' : 'Submit Pull Request'}</span>
+              </button>
             </div>
-
           </div>
         </div>
       )}

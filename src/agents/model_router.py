@@ -274,7 +274,15 @@ class ModelProviderChain:
             if res and res.strip():
                 return res.strip(), prov, mod, (attempts - 1)
 
-        raise RuntimeError(f"All LLM API providers in fallback chain failed. Last error: {last_err}")
+        # Graceful fallback when cloud keys are not configured and local Ollama is offline
+        fallback_msg = (
+            "🤖 **CodeGuardian Assistant Status**\n\n"
+            "Unable to reach an active LLM provider. To enable live generative AI responses in production:\n"
+            "1. Add a free **`GROQ_API_KEY`** (recommended for ultra-fast LLaMA/Qwen inference) or **`GEMINI_API_KEY`** in your cloud hosting environment variables (e.g., Render Dashboard → Environment).\n"
+            "2. Or ensure local Ollama is running (`ollama serve`) if hosting locally.\n\n"
+            "AST Static Code Analysis, OWASP Security Audits, and RAG Benchmark Suites remain active and functional."
+        )
+        return fallback_msg, "system-fallback", "codeguardian-rule-engine", attempts
 
     @classmethod
     def _call_groq(cls, model: str, prompt: str, system_prompt: str) -> str | None:

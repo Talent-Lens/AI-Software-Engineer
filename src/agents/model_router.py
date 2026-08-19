@@ -286,7 +286,7 @@ class ModelProviderChain:
 
     @classmethod
     def _call_groq(cls, model: str, prompt: str, system_prompt: str) -> str | None:
-        groq_key = os.getenv("GROQ_API_KEY")
+        groq_key = (os.getenv("GROQ_API_KEY") or "").strip().strip("'\"")
         if not groq_key:
             return None
 
@@ -299,32 +299,52 @@ class ModelProviderChain:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        payload = {"model": model, "messages": messages, "temperature": 0.2}
-        try:
-            resp = requests.post(cls.GROQ_API_URL, headers=headers, json=payload, timeout=30)
-            if resp.status_code == 200:
-                data = resp.json()
-                return data["choices"][0]["message"]["content"]
-        except Exception:
-            pass
+        # Try target model, fallback to llama-3.3-70b-versatile or llama-3.1-8b-instant
+        candidate_models = [model]
+        if model != "llama-3.3-70b-versatile":
+            candidate_models.append("llama-3.3-70b-versatile")
+        if "llama-3.1-8b-instant" not in candidate_models:
+            candidate_models.append("llama-3.1-8b-instant")
+
+        for cand in candidate_models:
+            payload = {"model": cand, "messages": messages, "temperature": 0.2}
+            try:
+                resp = requests.post(cls.GROQ_API_URL, headers=headers, json=payload, timeout=30)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return data["choices"][0]["message"]["content"]
+                else:
+                    logger.warning("Groq API (%s) returned HTTP %s: %s", cand, resp.status_code, resp.text[:200])
+            except Exception as err:
+                logger.warning("Groq API (%s) call failed: %s", cand, err)
         return None
 
     @classmethod
     def _call_gemini(cls, model: str, prompt: str, system_prompt: str) -> str | None:
-        gemini_key = os.getenv("GEMINI_API_KEY")
+        gemini_key = (os.getenv("GEMINI_API_KEY") or "").strip().strip("'\"")
         if not gemini_key:
             return None
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+        candidate_models = [model]
+        if "gemini-1.5-flash" not in candidate_models:
+            candidate_models.append("gemini-1.5-flash")
+        if "gemini-2.0-flash" not in candidate_models:
+            candidate_models.append("gemini-2.0-flash")
+
         combined_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
         payload = {"contents": [{"parts": [{"text": combined_prompt}]}]}
-        try:
-            resp = requests.post(url, json=payload, timeout=30)
-            if resp.status_code == 200:
-                data = resp.json()
-                return data["candidates"][0]["content"]["parts"][0]["text"]
-        except Exception:
-            pass
+
+        for cand in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{cand}:generateContent?key={gemini_key}"
+            try:
+                resp = requests.post(url, json=payload, timeout=30)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
+                else:
+                    logger.warning("Gemini API (%s) returned HTTP %s: %s", cand, resp.status_code, resp.text[:200])
+            except Exception as err:
+                logger.warning("Gemini API (%s) call failed: %s", cand, err)
         return None
 
     @classmethod

@@ -126,7 +126,7 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
   onModelChange,
 }) => {
   // Current Workflow Stage: 'input' | 'scanning' | 'results'
-  const [stage, setStage] = useState<'input' | 'scanning' | 'results'>(files && files.length > 0 ? 'results' : 'input');
+  const [stage, setStage] = useState<'input' | 'scanning' | 'results'>('input');
   const [inputTab, setInputTab] = useState<'upload' | 'github' | 'snippet'>('upload');
 
   // IDE Panel Layout States

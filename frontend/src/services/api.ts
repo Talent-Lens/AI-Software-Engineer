@@ -163,23 +163,32 @@ export function normalizeEvalReport(data: any): EvalReport {
 }
 
 export async function runEvaluation(): Promise<EvalReport> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/eval/run`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
-  });
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/eval/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
 
-  if (!res.ok) {
-    let errorMsg = `Evaluation endpoint failed with HTTP ${res.status}`;
-    try {
-      const errJson = await res.json();
-      if (errJson.detail) errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
-    } catch (_) {}
-    throw new Error(errorMsg);
+    if (!res.ok) {
+      let errorMsg = `Evaluation endpoint failed with HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        if (errJson.detail) errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+      } catch (_) {}
+      throw new Error(errorMsg);
+    }
+
+    const rawData = await res.json();
+    return normalizeEvalReport(rawData);
+  } catch (err: any) {
+    if (err?.name === 'TypeError' && (err.message === 'Failed to fetch' || err.message?.includes('fetch'))) {
+      throw new Error(
+        `Failed to reach backend API at ${API_BASE_URL || window.location.origin}. If deployed on free hosting (Render/Hugging Face), the server is likely waking up from cold sleep (~50s). Please wait a moment and retry.`
+      );
+    }
+    throw err;
   }
-
-  const rawData = await res.json();
-  return normalizeEvalReport(rawData);
 }
 
 export async function submitUserFeedback(feedback: UserFeedbackRequest): Promise<boolean> {

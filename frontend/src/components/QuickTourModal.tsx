@@ -194,39 +194,81 @@ export const QuickTourModal: React.FC<QuickTourModalProps> = ({
           {/* TAB 2: SUPPORTED SCOPE */}
           {activeTab === 'scope' && (
             <div className="space-y-4 animate-fadeIn">
+              
+              {/* Top Overview Callout */}
+              <div className="p-3.5 rounded-2xl bg-indigo-950/20 border border-indigo-500/20 flex items-start space-x-2.5">
+                <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
+                <div className="text-[11px] text-[#94a3b8] leading-relaxed">
+                  <strong className="text-white">Production Scope Reference: </strong>
+                  CodeGuardian operates as an automated security auditor, AST patch generator, and context-aware Q&A assistant. Every patch is grounded against syntax trees and verified via test execution.
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 
-                {/* In Scope Card */}
-                <div className="p-4 rounded-2xl bg-[#11131c] border border-emerald-500/20 space-y-2.5">
-                  <div className="flex items-center space-x-2 text-emerald-400 font-semibold text-xs">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>In Scope (Capabilities)</span>
+                {/* Card 1: Supported File Types & Languages */}
+                <div className="p-4 rounded-2xl bg-[#11131c] border border-[#232638] space-y-2.5">
+                  <div className="flex items-center space-x-2 text-indigo-300 font-semibold text-xs">
+                    <FileCode className="w-4 h-4 text-indigo-400" />
+                    <span>Supported File Types & Formats</span>
                   </div>
-                  <ul className="space-y-1.5 text-[11px] text-[#94a3b8] list-disc list-inside">
-                    <li><strong className="text-white">Supported Languages:</strong> Python, TypeScript/JavaScript, Go, Java, SQL.</li>
-                    <li><strong className="text-white">OWASP Top 10:</strong> Insecure deserialization, SQL injection, hardcoded secrets.</li>
-                    <li><strong className="text-white">Bug Detection:</strong> Bare excepts, error swallows, syntax errors.</li>
-                    <li><strong className="text-white">Verified Grounding:</strong> 100% verified line citations via syntax trees.</li>
-                    <li><strong className="text-white">Sandbox Testing:</strong> Pytest runner executes in isolated subprocesses.</li>
+                  <ul className="space-y-1.5 text-[11px] text-[#94a3b8] list-disc list-inside leading-relaxed">
+                    <li><strong className="text-white">Jupyter Notebooks:</strong> <code className="text-indigo-300">.ipynb</code> (code cell extraction & analysis).</li>
+                    <li><strong className="text-white">Python:</strong> <code className="text-indigo-300">.py</code> (Tree-Sitter AST & Pytest sandbox).</li>
+                    <li><strong className="text-white">TypeScript / JS:</strong> <code className="text-indigo-300">.ts</code>, <code className="text-indigo-300">.tsx</code>, <code className="text-indigo-300">.js</code>, <code className="text-indigo-300">.jsx</code>.</li>
+                    <li><strong className="text-white">Systems & Backend:</strong> <code className="text-indigo-300">.go</code>, <code className="text-indigo-300">.java</code>, <code className="text-indigo-300">.rs</code>, <code className="text-indigo-300">.cpp</code>.</li>
+                    <li><strong className="text-white">Data & Config:</strong> <code className="text-indigo-300">.sql</code>, <code className="text-indigo-300">.json</code>, <code className="text-indigo-300">.yaml</code>, <code className="text-indigo-300">.yml</code>.</li>
                   </ul>
                 </div>
 
-                {/* Out of Scope Card */}
-                <div className="p-4 rounded-2xl bg-[#11131c] border border-[#232638] space-y-2.5">
-                  <div className="flex items-center space-x-2 text-[#94a3b8] font-semibold text-xs">
-                    <AlertCircle className="w-4 h-4 text-amber-400" />
-                    <span>Out of Scope (Non-Goals)</span>
+                {/* Card 2: 7-Stage Verification Pipeline */}
+                <div className="p-4 rounded-2xl bg-[#11131c] border border-emerald-500/20 space-y-2.5">
+                  <div className="flex items-center space-x-2 text-emerald-400 font-semibold text-xs">
+                    <Layers className="w-4 h-4" />
+                    <span>7-Stage Verification Pipeline</span>
                   </div>
-                  <ul className="space-y-1.5 text-[11px] text-[#94a3b8] list-disc list-inside">
-                    <li><strong className="text-white">Not a general chatbot:</strong> Specialized for code auditing and repair.</li>
-                    <li><strong className="text-white">No arbitrary binary execution:</strong> Sandboxed execution is restricted to safe test runners.</li>
-                    <li><strong className="text-white">Human review first:</strong> All patches are presented as diffs for your review.</li>
+                  <ul className="space-y-1 text-[11px] text-[#94a3b8] list-decimal list-inside leading-relaxed">
+                    <li><strong className="text-white">Retrieval:</strong> ChromaDB + BM25 RRF hybrid search.</li>
+                    <li><strong className="text-white">AST Bug Detection:</strong> Tree-Sitter syntax patterns.</li>
+                    <li><strong className="text-white">Syntax Check:</strong> Ruff & AST compilation validation.</li>
+                    <li><strong className="text-white">Security Audit:</strong> OWASP Top 10 & CWE scanner.</li>
+                    <li><strong className="text-white">Line Verifier:</strong> 100% verified citation grounding.</li>
+                    <li><strong className="text-white">Test Sandbox:</strong> Subprocess isolated test runner.</li>
+                    <li><strong className="text-white">Doc Verifier:</strong> Signature & docstring auditor.</li>
+                  </ul>
+                </div>
+
+                {/* Card 3: Interactive Q&A Chat Capability */}
+                <div className="p-4 rounded-2xl bg-[#11131c] border border-indigo-500/30 space-y-2.5">
+                  <div className="flex items-center space-x-2 text-indigo-300 font-semibold text-xs">
+                    <Sparkles className="w-4 h-4 text-indigo-400" />
+                    <span>Restored Q&A Chat (Qwen-2.5 Coder 32B)</span>
+                  </div>
+                  <ul className="space-y-1.5 text-[11px] text-[#94a3b8] list-disc list-inside leading-relaxed">
+                    <li><strong className="text-white">What it does:</strong> Context-aware code explanations, risk rationale breakdowns, fix explanations, and follow-up queries.</li>
+                    <li><strong className="text-white">Clickable Line Jump:</strong> Chat citations link directly to line numbers in the Monaco editor.</li>
+                    <li><strong className="text-white">Per-File History:</strong> Preserves conversation threads per active source file.</li>
+                  </ul>
+                </div>
+
+                {/* Card 4: Limitations & Operational Boundaries */}
+                <div className="p-4 rounded-2xl bg-[#11131c] border border-amber-500/20 space-y-2.5">
+                  <div className="flex items-center space-x-2 text-amber-400 font-semibold text-xs">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Limitations & Boundaries</span>
+                  </div>
+                  <ul className="space-y-1.5 text-[11px] text-[#94a3b8] list-disc list-inside leading-relaxed">
+                    <li><strong className="text-white">Vulnerability Scope:</strong> OWASP A01, A03, A08 (pickle), hardcoded secrets, and swallowed exceptions.</li>
+                    <li><strong className="text-white">Repo Limits:</strong> Recommended &lt;50MB / 10-15 key files per interactive review session.</li>
+                    <li><strong className="text-white">Private Repos:</strong> Supported with Personal Access Tokens (stored in-memory only).</li>
+                    <li><strong className="text-white">Human Review:</strong> All patches are presented as diffs; partial complex patches require manual sign-off.</li>
                   </ul>
                 </div>
 
               </div>
             </div>
           )}
+
 
           {/* TAB 3: PIPELINE (7-AGENT NODES) */}
           {activeTab === 'architecture' && (

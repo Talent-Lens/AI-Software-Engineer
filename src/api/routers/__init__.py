@@ -1,7 +1,7 @@
 """
 FastAPI Router Package
 """
-from src.api.routers import health, analyze, retrieval, eval, agents, feedback, analytics, github, telemetry
+from src.api.routers import health, analyze, retrieval, eval, agents, feedback, analytics, github, telemetry, chat
 
 __all__ = [
     "health",
@@ -13,4 +13,6 @@ __all__ = [
     "analytics",
     "github",
     "telemetry",
+    "chat",
 ]
+

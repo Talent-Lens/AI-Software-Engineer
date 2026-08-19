@@ -14,9 +14,10 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Sequence
-
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Enums & Data Models
@@ -165,71 +166,84 @@ class ModelProviderChain:
     """
 
     GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-    OLLAMA_API_URL = "http://localhost:11434/api/generate"
+    OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/chat")
 
     @classmethod
-    def get_routing_decision(cls, complexity: ComplexityScore) -> RoutingDecision:
+    def get_routing_decision(
+        cls, complexity: ComplexityScore, preferred_model: str = ""
+    ) -> RoutingDecision:
         groq_key = os.getenv("GROQ_API_KEY")
         gemini_key = os.getenv("GEMINI_API_KEY")
 
+        chain: list[tuple[str, str]] = []
+
+        # If user explicitly preferred a model, prioritize it if provider is available
+        if preferred_model:
+            pref = preferred_model.lower()
+            if "gemini" in pref and gemini_key:
+                chain.append(("gemini", preferred_model))
+            elif ("qwen-2.5-coder" in pref or "llama-3.3" in pref or "llama3" in pref) and groq_key:
+                chain.append(("groq", preferred_model))
+            elif "qwen" in pref or "llama" in pref or "deepseek" in pref:
+                # Add normalized local ollama names if requested
+                if pref.startswith("qwen") and ":" not in pref:
+                    chain.append(("ollama", "qwen2.5:3b"))
+                else:
+                    chain.append(("ollama", preferred_model))
+
         if complexity.tier == ComplexityTier.DEEP_REASONING:
-            # Deep Reasoning Route: Primary = DeepSeek-R1 via Ollama/Groq, Fallback = Llama-3.3-70b / Qwen
-            primary_prov = "ollama"
-            primary_mod = "deepseek-r1:7b"
-            chain = [("ollama", "deepseek-r1:7b")]
+            primary_prov = "groq" if groq_key else ("gemini" if gemini_key else "ollama")
+            primary_mod = "llama-3.3-70b-versatile" if groq_key else ("gemini-2.5-flash" if gemini_key else "qwen2.5:3b")
+
             if groq_key:
                 chain.append(("groq", "llama-3.3-70b-versatile"))
             if gemini_key:
                 chain.append(("gemini", "gemini-2.5-flash"))
-            chain.append(("ollama", "qwen2.5:7b"))
-            chain.append(("mock", "rule-reasoning-engine"))
+            chain.append(("ollama", "qwen2.5:3b"))
+            chain.append(("ollama", "llama3.2:1b"))
+            chain.append(("ollama", "llama3.1:8b"))
 
         elif complexity.tier == ComplexityTier.BALANCED:
-            # Balanced Route: Primary = Groq Llama-3.3-70b / Qwen, Fallback = Gemini / Ollama
-            if groq_key:
-                primary_prov = "groq"
-                primary_mod = "llama-3.3-70b-versatile"
-            elif gemini_key:
-                primary_prov = "gemini"
-                primary_mod = "gemini-2.5-flash"
-            else:
-                primary_prov = "ollama"
-                primary_mod = "qwen2.5:7b"
+            primary_prov = "groq" if groq_key else ("gemini" if gemini_key else "ollama")
+            primary_mod = "llama-3.3-70b-versatile" if groq_key else ("gemini-2.5-flash" if gemini_key else "qwen2.5:3b")
 
-            chain = []
             if groq_key:
                 chain.append(("groq", "llama-3.3-70b-versatile"))
             if gemini_key:
                 chain.append(("gemini", "gemini-2.5-flash"))
-            chain.append(("ollama", "qwen2.5:7b"))
-            chain.append(("mock", "rule-balanced-engine"))
+            chain.append(("ollama", "qwen2.5:3b"))
+            chain.append(("ollama", "llama3.2:1b"))
+            chain.append(("ollama", "llama3.1:8b"))
 
         else:  # ComplexityTier.FAST
-            # Fast Route: Sub-second latency models (Groq qwen-2.5-coder-32b or Gemini 2.5 flash)
-            if groq_key:
-                primary_prov = "groq"
-                primary_mod = "qwen-2.5-coder-32b"
-            elif gemini_key:
-                primary_prov = "gemini"
-                primary_mod = "gemini-2.5-flash"
-            else:
-                primary_prov = "ollama"
-                primary_mod = "qwen2.5:3b"
+            primary_prov = "groq" if groq_key else ("gemini" if gemini_key else "ollama")
+            primary_mod = "qwen-2.5-coder-32b" if groq_key else ("gemini-2.5-flash" if gemini_key else "qwen2.5:3b")
 
-            chain = []
             if groq_key:
                 chain.append(("groq", "qwen-2.5-coder-32b"))
             if gemini_key:
                 chain.append(("gemini", "gemini-2.5-flash"))
             chain.append(("ollama", "qwen2.5:3b"))
-            chain.append(("mock", "rule-fast-engine"))
+            chain.append(("ollama", "llama3.2:1b"))
+            chain.append(("ollama", "llama3.1:8b"))
+
+        # Deduplicate while preserving order
+        dedup_chain: list[tuple[str, str]] = []
+        seen = set()
+        for item in chain:
+            if item not in seen:
+                seen.add(item)
+                dedup_chain.append(item)
+
+        final_primary_prov = dedup_chain[0][0] if dedup_chain else primary_prov
+        final_primary_mod = dedup_chain[0][1] if dedup_chain else primary_mod
 
         return RoutingDecision(
             query="",
             complexity=complexity,
-            primary_provider=primary_prov,
-            primary_model=primary_mod,
-            fallback_chain=chain,
+            primary_provider=final_primary_prov,
+            primary_model=final_primary_mod,
+            fallback_chain=dedup_chain,
         )
 
     @classmethod
@@ -241,25 +255,26 @@ class ModelProviderChain:
         Returns: (answer_text, provider_used, model_used, fallback_attempts)
         """
         attempts = 0
+        last_err = None
 
         for prov, mod in decision.fallback_chain:
             attempts += 1
             res = None
 
-            if prov == "groq":
-                res = cls._call_groq(mod, prompt, system_prompt)
-            elif prov == "gemini":
-                res = cls._call_gemini(mod, prompt, system_prompt)
-            elif prov == "ollama":
-                res = cls._call_ollama(mod, prompt, system_prompt)
-            elif prov == "mock":
-                res = cls._call_mock(mod, prompt)
+            try:
+                if prov == "groq":
+                    res = cls._call_groq(mod, prompt, system_prompt)
+                elif prov == "gemini":
+                    res = cls._call_gemini(mod, prompt, system_prompt)
+                elif prov == "ollama":
+                    res = cls._call_ollama(mod, prompt, system_prompt)
+            except Exception as err:
+                last_err = err
 
-            if res:
-                return res, prov, mod, (attempts - 1)
+            if res and res.strip():
+                return res.strip(), prov, mod, (attempts - 1)
 
-        # Ultimate fallback
-        return f"Executed query via fallback rule engine for query.", "mock", "fallback-engine", attempts
+        raise RuntimeError(f"All LLM API providers in fallback chain failed. Last error: {last_err}")
 
     @classmethod
     def _call_groq(cls, model: str, prompt: str, system_prompt: str) -> str | None:
@@ -278,7 +293,7 @@ class ModelProviderChain:
 
         payload = {"model": model, "messages": messages, "temperature": 0.2}
         try:
-            resp = requests.post(cls.GROQ_API_URL, headers=headers, json=payload, timeout=8)
+            resp = requests.post(cls.GROQ_API_URL, headers=headers, json=payload, timeout=30)
             if resp.status_code == 200:
                 data = resp.json()
                 return data["choices"][0]["message"]["content"]
@@ -296,7 +311,7 @@ class ModelProviderChain:
         combined_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
         payload = {"contents": [{"parts": [{"text": combined_prompt}]}]}
         try:
-            resp = requests.post(url, json=payload, timeout=8)
+            resp = requests.post(url, json=payload, timeout=30)
             if resp.status_code == 200:
                 data = resp.json()
                 return data["candidates"][0]["content"]["parts"][0]["text"]
@@ -306,22 +321,29 @@ class ModelProviderChain:
 
     @classmethod
     def _call_ollama(cls, model: str, prompt: str, system_prompt: str) -> str | None:
-        combined_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-        try:
-            resp = requests.post(
-                cls.OLLAMA_API_URL,
-                json={"model": model, "prompt": combined_prompt, "stream": False},
-                timeout=12,
-            )
-            if resp.status_code == 200:
-                return resp.json().get("response")
-        except Exception:
-            pass
-        return None
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        payload = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "temperature": 0.2,
+                "num_ctx": 4096,
+                "num_predict": 512,
+            },
+        }
+        resp = requests.post(
+            cls.OLLAMA_API_URL,
+            json=payload,
+            timeout=75,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("message", {}).get("content")
+        raise RuntimeError(f"Ollama ({model}) returned HTTP {resp.status_code}: {resp.text[:100]}")
 
-    @classmethod
-    def _call_mock(cls, model: str, prompt: str) -> str:
-        return f"[Synthesized Response via {model}]: Processed request successfully."
 
 
 # ---------------------------------------------------------------------------
@@ -388,7 +410,10 @@ def analyze_query_complexity(query: str, context: str = "") -> dict[str, Any]:
 
 
 def route_and_execute(
-    query: str, context: str = "", system_prompt: str = ""
+    query: str,
+    context: str = "",
+    system_prompt: str = "",
+    preferred_model: str = "",
 ) -> dict[str, Any]:
     """
     Inspects query complexity and dynamically routes query to the optimal model provider,
@@ -399,8 +424,8 @@ def route_and_execute(
     # 1. Analyze complexity
     comp_score = QueryComplexityAnalyzer.analyze(query, context)
 
-    # 2. Get routing decision
-    decision = ModelProviderChain.get_routing_decision(comp_score)
+    # 2. Get routing decision with preferred model preference if provided
+    decision = ModelProviderChain.get_routing_decision(comp_score, preferred_model=preferred_model)
     decision.query = query
 
     # 3. Format full prompt

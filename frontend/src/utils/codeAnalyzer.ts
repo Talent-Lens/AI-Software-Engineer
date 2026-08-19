@@ -120,7 +120,7 @@ export const analyzeCodeFile = (name: string, content: string, filePath?: string
     if (
       trimmed.includes('sk_live_') || 
       trimmed.includes('ghp_') ||
-      trimmed.match(/(api_key|secret_key|password|jwt_secret)\s*=\s*['"][a-zA-Z0-9_\-]{8,}['"]/i)
+      trimmed.match(/(?:[a-zA-Z0-9_.]+\.)?(api_key|secret_key|password|jwt_secret|secret)\s*=\s*['"][^'"]{4,}['"]/i)
     ) {
       hasSecretRisk = true;
       securityIssues.push({
@@ -130,7 +130,7 @@ export const analyzeCodeFile = (name: string, content: string, filePath?: string
         line: lineNo,
         rule: 'SAST-HARDCODED-SECRET',
         description: 'Hardcoding plaintext credentials in source code exposes tokens if source repositories are shared or leaked.',
-        remediation: 'Extract credentials into environment variables (e.g. os.getenv or process.env).'
+        remediation: 'Extract credentials into environment variables (e.g. os.getenv("SECRET_KEY", "") or process.env.SECRET_KEY).'
       });
       lineCitations.push({ line: lineNo, text: trimmed, status: 'verified' });
     }
@@ -169,7 +169,7 @@ export const analyzeCodeFile = (name: string, content: string, filePath?: string
     }
 
     // G. Bare Except Clause (Python Logic Bug)
-    if (trimmed === 'except:' || trimmed.startsWith('except:')) {
+    if (trimmed === 'except:' || trimmed.startsWith('except:') || trimmed.startsWith('except :')) {
       hasBareExcept = true;
       lineCitations.push({ line: lineNo, text: trimmed, status: 'verified' });
     }
@@ -178,60 +178,88 @@ export const analyzeCodeFile = (name: string, content: string, filePath?: string
   const hasSecurityRisk = hasPickleLoadRisk || hasPickleLoadsRisk || hasSqlRisk || hasSecretRisk || hasSsrfRisk || hasXssRisk || hasEvalRisk;
   const hasBug = hasBareExcept;
 
-  // 3. Generate Concrete, Verified Proposed Fix
+  // 3. Generate Concrete, Verified Proposed Fix without Stale Contradictory Comments
   let proposedFix = cleanContent;
 
   if (hasPickleLoadsRisk) {
-    // Generate secure JSON replacement for pickle.loads
+    // Generate secure JSON replacement for pickle.loads and strip trailing comments on that statement
     proposedFix = cleanContent.replace(
-      /([a-zA-Z0-9_]+)\s*=\s*pickle\.loads\s*\((.*?)\)/g,
+      /([a-zA-Z0-9_]+)\s*=\s*pickle\.loads\s*\((.*?)\)(?:\s*#.*)?/g,
       '# SAFE (CWE-502 / OWASP A08): Replace insecure pickle.loads with safe JSON deserialization\nimport json\ntry:\n    $1 = json.loads($2.decode("utf-8") if isinstance($2, bytes) else $2)\nexcept Exception as json_err:\n    raise ValueError("Invalid untrusted payload - unsafe deserialization rejected") from json_err'
     );
     if (proposedFix === cleanContent) {
       proposedFix = cleanContent.replace(
-        /pickle\.loads\s*\((.*?)\)/g,
+        /pickle\.loads\s*\((.*?)\)(?:\s*#.*)?/g,
         'json.loads($1) /* SAFE (CWE-502): Migrated to JSON deserializer */'
       );
     }
   } else if (hasPickleLoadRisk) {
     if (/pickle\.load\s*\(\s*open\s*\(/i.test(cleanContent)) {
       proposedFix = cleanContent.replace(
-        /([a-zA-Z0-9_]+)\s*=\s*pickle\.load\s*\(\s*open\s*\(\s*([^,\)]+)(?:,\s*['"][^'"]*['"])?\s*\)\s*\)/g,
+        /([a-zA-Z0-9_]+)\s*=\s*pickle\.load\s*\(\s*open\s*\(\s*([^,\)]+)(?:,\s*['"][^'"]*['"])?\s*\)\s*\)(?:\s*#.*)?/g,
         '# SAFE (CWE-502 / OWASP A08): Use validated context manager\nwith open($2, "rb") as f_in:\n    $1 = pickle.load(f_in)'
       );
     } else {
       proposedFix = cleanContent.replace(
-        /pickle\.load\((.*?)\)/g,
+        /pickle\.load\((.*?)\)(?:\s*#.*)?/g,
         '# SAFE (CWE-502 / OWASP A08): Verified file stream\n    pickle.load($1)'
       );
     }
   } else if (hasSqlRisk) {
     proposedFix = cleanContent
-      .replace(/f"SELECT\s+(.*?)\s+FROM\s+(.*?)\s+WHERE\s+(.*?)=\s*\{([a-zA-Z0-9_]+)\}"/gi, '"SELECT $1 FROM $2 WHERE $3 = %s", ($4,)')
-      .replace(/f'SELECT\s+(.*?)\s+FROM\s+(.*?)\s+WHERE\s+(.*?)=\s*\{([a-zA-Z0-9_]+)\}'/gi, '"SELECT $1 FROM $2 WHERE $3 = %s", ($4,)');
+      .replace(/f"SELECT\s+(.*?)\s+FROM\s+(.*?)\s+WHERE\s+(.*?)=\s*\{([a-zA-Z0-9_]+)\}"(?:\s*#.*)?/gi, '"SELECT $1 FROM $2 WHERE $3 = %s", ($4,)')
+      .replace(/f'SELECT\s+(.*?)\s+FROM\s+(.*?)\s+WHERE\s+(.*?)=\s*\{([a-zA-Z0-9_]+)\}'(?:\s*#.*)?/gi, '"SELECT $1 FROM $2 WHERE $3 = %s", ($4,)');
     if (proposedFix === cleanContent) {
-      proposedFix = cleanContent.replace(/f"(SELECT.*?)"/gi, '"$1" /* SAFE (CWE-89): Parameterized query placeholder */');
+      proposedFix = cleanContent.replace(/f"(SELECT.*?)"(?:\s*#.*)?/gi, '"$1" /* SAFE (CWE-89): Parameterized query placeholder */');
     }
   } else if (hasSecretRisk) {
+    const envVarNames: Record<string, string> = {
+      api_key: 'API_KEY',
+      secret_key: 'SECRET_KEY',
+      password: 'PASSWORD',
+      jwt_secret: 'JWT_SECRET',
+      secret: 'SECRET_KEY',
+    };
+
     if (detectedLanguage === 'python') {
-      proposedFix = 'import os\n' + cleanContent.replace(
-        /(api_key|secret_key|password|jwt_secret)\s*=\s*['"][^'"]+['"]/gi,
-        '$1 = os.getenv("$1".upper(), "") # SAFE (CWE-798): Loaded from environment'
-      );
+      const fixedLines = cleanContent.split('\n').map(line => {
+        // Match assignment like `app.secret_key = "..."` or `secret_key = "..."` with any trailing comment
+        const match = line.match(/^(\s*)([a-zA-Z0-9_.]*?\b(api_key|secret_key|password|jwt_secret|secret))\s*=\s*['"][^'"]+['"](?:\s*#.*)?$/i);
+        if (match) {
+          const indent = match[1];
+          const fullVar = match[2];
+          const baseVar = match[3].toLowerCase();
+          const envName = envVarNames[baseVar] || baseVar.toUpperCase();
+          return `${indent}${fullVar} = os.getenv("${envName}", "")  # SAFE (CWE-798): Loaded from environment`;
+        }
+        return line;
+      });
+
+      const joined = fixedLines.join('\n');
+      proposedFix = joined.includes('import os') ? joined : `import os\n${joined}`;
     } else {
-      proposedFix = cleanContent.replace(
-        /(api_key|secret_key|password|jwt_secret)\s*=\s*['"][^'"]+['"]/gi,
-        '$1 = process.env.$1?.toUpperCase() || "" /* SAFE (CWE-798): Loaded from environment */'
-      );
+      const fixedLines = cleanContent.split('\n').map(line => {
+        const match = line.match(/^(\s*)([a-zA-Z0-9_.]*?\b(api_key|secret_key|password|jwt_secret|secret))\s*=\s*['"][^'"]+['"](?:\s*(?:\/\/|#).*)?$/i);
+        if (match) {
+          const indent = match[1];
+          const fullVar = match[2];
+          const baseVar = match[3].toLowerCase();
+          const envName = envVarNames[baseVar] || baseVar.toUpperCase();
+          return `${indent}${fullVar} = process.env.${envName} || "";  // SAFE (CWE-798): Loaded from environment`;
+        }
+        return line;
+      });
+      proposedFix = fixedLines.join('\n');
     }
   } else if (hasEvalRisk) {
-    proposedFix = cleanContent.replace(/eval\((.*?)\)/g, 'JSON.parse($1) /* SAFE (CWE-94): Static JSON parser replacement */');
+    proposedFix = cleanContent.replace(/eval\((.*?)\)(?:\s*(?:\/\/|#).*)?/g, 'JSON.parse($1) /* SAFE (CWE-94): Static JSON parser replacement */');
   } else if (hasBareExcept) {
     proposedFix = `import logging\nlogger = logging.getLogger(__name__)\n\n` + cleanContent.replace(
-      /except:/g, 
+      /except:(?:\s*#.*)?/g, 
       'except Exception as err:\n        logger.error("Explicit exception handled: %s", err)'
     );
   }
+
 
   // If a risk was detected but no automated patch was produced, prepend a clear Manual Review Notice
   if (hasSecurityRisk && proposedFix === cleanContent) {

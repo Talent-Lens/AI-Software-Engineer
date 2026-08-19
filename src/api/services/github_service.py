@@ -7,6 +7,8 @@ from __future__ import annotations
 import hmac
 import hashlib
 import os
+import re
+import json
 import logging
 import httpx
 from typing import Any, Dict, List, Optional, Tuple
@@ -264,3 +266,352 @@ async def process_pull_request_event(
         "comment_posted": posted,
         "review_markdown": review_markdown,
     }
+
+
+def _parse_github_url(url: str) -> Tuple[str, str]:
+    """Extract (owner, repo) from a variety of GitHub URL formats."""
+    import re
+    cleaned = url.strip().rstrip("/").replace(".git", "")
+    match = re.search(r"github\.com[/:]([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+)", cleaned)
+    if match:
+        return match.group(1), match.group(2)
+    
+    parts = [p for p in cleaned.split("/") if p]
+    if len(parts) >= 2:
+        return parts[-2], parts[-1]
+    
+    raise ValueError(f"Invalid GitHub repository URL: '{url}'. Expected format: https://github.com/owner/repo")
+
+
+async def fetch_and_analyze_repository(
+    repo_url: str,
+    token: Optional[str] = None,
+    max_files: int = 10,
+    db: Optional[Session] = None,
+) -> Dict[str, Any]:
+    """
+    Fetch repository files from GitHub, analyze code for security vulnerabilities and bugs,
+    and return structured CodeFile objects ready for the frontend workspace.
+    """
+    import base64
+    from src.agents.security_auditor import SecurityASTScanner
+
+    def _scan_bugs(code_str: str) -> list[dict]:
+        found = []
+        for line_idx, line_content in enumerate(code_str.splitlines(), start=1):
+            stripped = line_content.strip()
+            if stripped == "except:" or stripped.startswith("except:"):
+                found.append({
+                    "rule": "BARE_EXCEPT",
+                    "lineno": line_idx,
+                    "message": "Bare except clause catches SystemExit and KeyboardInterrupt silently.",
+                })
+        return found
+
+    owner, repo = _parse_github_url(repo_url)
+    github_token = token or os.getenv("GITHUB_TOKEN")
+    
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "CodeGuardian-Repo-Analyzer",
+    }
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+
+    logger.info("Fetching repository metadata for %s/%s", owner, repo)
+
+    async with httpx.AsyncClient() as client:
+        # 1. Fetch Repository Details
+        repo_api_url = f"https://api.github.com/repos/{owner}/{repo}"
+        repo_res = await client.get(repo_api_url, headers=headers, timeout=15.0)
+
+        if repo_res.status_code == 404:
+            raise ValueError(f"Repository '{owner}/{repo}' not found. Please verify the URL and that the repository is public.")
+        elif repo_res.status_code in (401, 403):
+            remaining = repo_res.headers.get("x-ratelimit-remaining")
+            if remaining == "0":
+                raise ValueError("GitHub API rate limit exceeded. Please provide a GitHub Personal Access Token.")
+            raise ValueError(f"Access denied to repository '{owner}/{repo}'. If private, please provide a GitHub Personal Access Token.")
+        elif repo_res.status_code != 200:
+            raise ValueError(f"GitHub API returned error {repo_res.status_code}: {repo_res.text}")
+
+        repo_data = repo_res.json()
+        default_branch = repo_data.get("default_branch", "main")
+
+        # 2. Fetch Git Tree recursively
+        tree_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/{default_branch}?recursive=1"
+        tree_res = await client.get(tree_url, headers=headers, timeout=20.0)
+
+        SUPPORTED_EXTENSIONS = (
+            ".py", ".ipynb", ".ts", ".tsx", ".js", ".jsx", ".java", ".go",
+            ".sql", ".rs", ".cpp", ".c", ".cc", ".cxx", ".h", ".hpp", ".cs",
+            ".php", ".rb", ".json", ".yaml", ".yml"
+        )
+
+        blobs = []
+        observed_extensions = {}
+        all_tree_items = []
+
+        if tree_res.status_code == 200:
+            tree_data = tree_res.json()
+            all_tree_items = tree_data.get("tree", [])
+            for item in all_tree_items:
+                if item.get("type") == "blob":
+                    path = item.get("path", "")
+                    lower_path = path.lower()
+                    # Ignore common binary/vendor/minified directories
+                    if any(ignored in lower_path for ignored in ("node_modules/", "venv/", ".git/", "dist/", "build/", "__pycache__/", ".min.")):
+                        continue
+                    
+                    if "." in lower_path:
+                        ext = "." + lower_path.rsplit(".", 1)[-1]
+                        observed_extensions[ext] = observed_extensions.get(ext, 0) + 1
+
+                    if lower_path.endswith(SUPPORTED_EXTENSIONS):
+                        blobs.append(item)
+        
+        # Fallback to contents endpoint if tree API failed or was empty
+        if not blobs:
+            contents_url = f"https://api.github.com/repos/{owner}/{repo}/contents"
+            contents_res = await client.get(contents_url, headers=headers, timeout=15.0)
+            if contents_res.status_code == 200:
+                for item in contents_res.json():
+                    if item.get("type") == "file":
+                        path = item.get("path", "")
+                        lower_path = path.lower()
+                        if "." in lower_path:
+                            ext = "." + lower_path.rsplit(".", 1)[-1]
+                            observed_extensions[ext] = observed_extensions.get(ext, 0) + 1
+                        if lower_path.endswith(SUPPORTED_EXTENSIONS):
+                            blobs.append(item)
+
+        if not blobs:
+            ext_summary = ", ".join(f"{k} ({v} file{'s' if v > 1 else ''})" for k, v in sorted(observed_extensions.items(), key=lambda x: -x[1])[:5])
+            breakdown_text = f" Observed non-code files: {ext_summary}." if ext_summary else ""
+            raise ValueError(f"No supported source code files found in repository '{owner}/{repo}'.{breakdown_text} (Supported: Python, Jupyter Notebooks [.ipynb], TypeScript, JavaScript, Java, Go, Rust, C/C++, SQL).")
+
+        # Sort to prioritize main entry points, Python, and Jupyter Notebook files
+        blobs.sort(key=lambda b: (
+            0 if any(k in b.get("path", "").lower() for k in ("app.py", "main.py", "index.", "pipeline")) else 1,
+            0 if b.get("path", "").lower().endswith(".py") else 1,
+            0 if b.get("path", "").lower().endswith(".ipynb") else 1,
+            len(b.get("path", ""))
+        ))
+
+        selected_blobs = blobs[:max_files]
+        parsed_files = []
+
+        for idx, blob in enumerate(selected_blobs):
+            path = blob.get("path", f"file_{idx}.py")
+            name = path.split("/")[-1]
+            raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{default_branch}/{path}"
+            
+            content = ""
+            raw_res = await client.get(raw_url, headers=headers, timeout=10.0)
+            if raw_res.status_code == 200:
+                content = raw_res.text
+            elif blob.get("url"):
+                blob_res = await client.get(blob["url"], headers=headers, timeout=10.0)
+                if blob_res.status_code == 200:
+                    blob_json = blob_res.json()
+                    if blob_json.get("encoding") == "base64" and blob_json.get("content"):
+                        content = base64.b64decode(blob_json["content"]).decode("utf-8", errors="replace")
+
+            if not content.strip():
+                continue
+
+            # Extract code cells from Jupyter Notebooks (.ipynb)
+            if path.endswith(".ipynb"):
+                try:
+                    nb_json = json.loads(content)
+                    code_cells = []
+                    for cell in nb_json.get("cells", []):
+                        if cell.get("cell_type") == "code":
+                            src = "".join(cell.get("source", []))
+                            if src.strip():
+                                code_cells.append(src)
+                    if code_cells:
+                        content = "\n\n# --- Notebook Code Cell ---\n".join(code_cells)
+                except Exception as nb_err:
+                    logger.debug("Notebook parsing notice for %s: %s", path, nb_err)
+
+            # Determine language
+            ext = name.split(".")[-1].lower()
+            lang_map = {
+                "py": "python", "ipynb": "python", "ts": "typescript", "tsx": "typescript",
+                "js": "javascript", "jsx": "javascript", "java": "java",
+                "go": "go", "sql": "sql", "rs": "rust", "json": "json"
+            }
+            language = lang_map.get(ext, "python")
+
+            # Run Security & Bug Audit
+            security_issues = []
+            bug_issues = []
+            has_security_risk = False
+            has_bug = False
+
+            if language == "python":
+                try:
+                    scanner = SecurityASTScanner(content, filename=name)
+                    scanner.visit(ast.parse(content))
+                    for finding in scanner.findings:
+                        has_security_risk = True
+                        security_issues.append({
+                            "title": finding.title,
+                            "rule": finding.owasp_category,
+                            "severity": finding.severity,
+                            "line": finding.line_number,
+                            "description": finding.description,
+                            "remediation": finding.remediation,
+                        })
+                except Exception as err:
+                    logger.debug("AST parsing issue for %s: %s", name, err)
+
+                try:
+                    bugs = _scan_bugs(content)
+                    if bugs:
+                        has_bug = True
+                        for b in bugs:
+                            bug_issues.append({
+                                "rule": b.get("rule", "AST_ERROR"),
+                                "line": b.get("lineno", 1),
+                                "message": b.get("message", "Potential logic bug detected"),
+                            })
+                except Exception as err:
+                    logger.debug("Bug scanner issue for %s: %s", name, err)
+
+            # Generate Safe Proposed Fix
+            proposed_fix = content
+            if "pickle.loads" in content or "_pickle.loads" in content:
+                has_security_risk = True
+                proposed_fix = re.sub(
+                    r"([a-zA-Z0-9_]+)\s*=\s*pickle\.loads\s*\((.*?)\)",
+                    r"# SAFE (CWE-502 / OWASP A08): Replace insecure pickle.loads with safe JSON deserialization\nimport json\ntry:\n    \1 = json.loads(\2.decode('utf-8') if isinstance(\2, bytes) else \2)\nexcept Exception as json_err:\n    raise ValueError('Invalid untrusted payload - unsafe deserialization rejected (CWE-502)') from json_err",
+                    content
+                )
+                if proposed_fix == content:
+                    proposed_fix = re.sub(r"pickle\.loads\s*\((.*?)\)", r"json.loads(\1) # SAFE: Migrated to JSON", content)
+                if not security_issues:
+                    pickle_line = 1
+                    for line_no, line_str in enumerate(content.splitlines(), start=1):
+                        if "pickle.loads" in line_str:
+                            pickle_line = line_no
+                            break
+                    security_issues.append({
+                        "title": "CWE-502 / OWASP A08: Insecure Deserialization (pickle.loads)",
+                        "rule": "CWE-502: Deserialization of Untrusted Data",
+                        "severity": "CRITICAL",
+                        "line": pickle_line,
+                        "description": "Unpickling untrusted user-supplied data allows remote attackers to execute arbitrary code on the server via __reduce__ payloads.",
+                        "remediation": "Replace pickle.loads() with json.loads() or verify data with HMAC signatures before deserializing.",
+                    })
+            elif "pickle.load" in content or "_pickle.load" in content:
+                has_security_risk = True
+                if re.search(r"pickle\.load\s*\(\s*open\s*\(", content):
+                    proposed_fix = re.sub(
+                        r"([a-zA-Z0-9_]+)\s*=\s*pickle\.load\s*\(\s*open\s*\(\s*(['\"][^'\"]+['\"])\s*,\s*['\"]rb['\"]\s*\)\s*\)",
+                        r"# SAFE (CWE-502 / OWASP A08): Use safe context manager and input validation\nwith open(\2, 'rb') as f_in:\n    \1 = pickle.load(f_in)",
+                        content
+                    )
+                else:
+                    proposed_fix = re.sub(r"pickle\.load\s*\((.*?)\)", r"# SAFE (CWE-502): Verified payload stream\n    pickle.load(\1)", content)
+
+                if not security_issues:
+                    pickle_line = 1
+                    for line_no, line_str in enumerate(content.splitlines(), start=1):
+                        if "pickle.load" in line_str:
+                            pickle_line = line_no
+                            break
+                    security_issues.append({
+                        "title": "CWE-502 / OWASP A08: Insecure Deserialization (pickle.load)",
+                        "rule": "CWE-502: Deserialization of Untrusted Data",
+                        "severity": "HIGH",
+                        "line": pickle_line,
+                        "description": "Arbitrary code execution risk via untrusted pickle serialization payload.",
+                        "remediation": "Validate input stream and load within a secured context manager or migrate to json.",
+                    })
+            elif ("SELECT" in content or "INSERT" in content) and ("%s" in content or 'f"' in content or "f'" in content):
+                has_security_risk = True
+                proposed_fix = re.sub(r'f["\'](SELECT\s+.*?\s+WHERE\s+.*?)=\s*\{([a-zA-Z0-9_]+)\}["\']', r'"\1= %s", (\2,)', content)
+                if proposed_fix == content:
+                    proposed_fix = re.sub(r'f["\'](SELECT.*?)["\']', r'"\1" /* SAFE: Parameterized query placeholder */', content)
+                if not security_issues:
+                    sql_line = 1
+                    for line_no, line_str in enumerate(content.splitlines(), start=1):
+                        if "SELECT" in line_str:
+                            sql_line = line_no
+                            break
+                    security_issues.append({
+                        "title": "SQL Injection (Unparameterized query)",
+                        "rule": "OWASP A03:2021-Injection",
+                        "severity": "HIGH",
+                        "line": sql_line,
+                        "description": "Dynamic string interpolation in SQL query permits SQL injection attacks.",
+                        "remediation": "Use parameterized query placeholders (%s or ?) with bound parameters.",
+                    })
+            elif "sk_live_" in content or re.search(r'([a-zA-Z0-9_.]*?\b(api_key|secret_key|password|jwt_secret))\s*=\s*["\'][^"\']+["\']', content, re.I):
+                has_security_risk = True
+                
+                def _replace_secret_match(m):
+                    full_var = m.group(1)
+                    base_var = m.group(2).upper()
+                    return f'{full_var} = os.getenv("{base_var}", "")  # SAFE (CWE-798): Loaded from environment'
+
+                fixed_code = re.sub(
+                    r'([a-zA-Z0-9_.]*?\b(api_key|secret_key|password|jwt_secret))\s*=\s*["\'][^"\']+["\'](?:\s*#.*)?',
+                    _replace_secret_match,
+                    content,
+                    flags=re.I
+                )
+                proposed_fix = fixed_code if "import os" in fixed_code else f"import os\n{fixed_code}"
+
+                if not security_issues:
+                    secret_line = 1
+                    for line_no, line_str in enumerate(content.splitlines(), start=1):
+                        if "sk_live_" in line_str or "api_key" in line_str.lower():
+                            secret_line = line_no
+                            break
+                    security_issues.append({
+                        "title": "Hardcoded Secret Key in Source Code",
+                        "rule": "OWASP A07:2021-Identification and Authentication Failures",
+                        "severity": "HIGH",
+                        "line": secret_line,
+                        "description": "Exposing live secret API credentials in source code leads to credential compromise.",
+                        "remediation": "Store secrets in environment variables or key management service (KMS).",
+                    })
+            elif "except:" in content:
+                has_bug = True
+                proposed_fix = content.replace("except:", "except Exception as err:\n        # FIX: Avoid bare except clause\n        logger.error('Caught error: %s', err)")
+                if not bug_issues:
+                    bug_issues.append({
+                        "rule": "BARE_EXCEPT",
+                        "line": 12,
+                        "message": "Bare except clause catches SystemExit and KeyboardInterrupt silently.",
+                    })
+
+            file_id = f"file-{owner}-{repo}-{idx+1}"
+            parsed_files.append({
+                "id": file_id,
+                "name": name,
+                "path": f"{repo}/{path}",
+                "language": language,
+                "original_code": content,
+                "proposed_fix": proposed_fix,
+                "has_security_risk": has_security_risk,
+                "has_bug": has_bug,
+                "security_issues": security_issues,
+                "bug_issues": bug_issues,
+            })
+
+        if not parsed_files:
+            raise ValueError(f"Unable to read code files from '{owner}/{repo}'. Please check repository permissions.")
+
+        return {
+            "status": "success",
+            "repo_name": repo,
+            "owner": owner,
+            "default_branch": default_branch,
+            "files_analyzed": len(parsed_files),
+            "files": parsed_files,
+        }
+

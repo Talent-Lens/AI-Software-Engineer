@@ -88,6 +88,7 @@ class EvalResponse(BaseModel):
     hits_at_3_rate: float
     hits_at_5_rate: float
     hits_at_10_rate: float
+    metrics: Optional[dict[str, Any]] = None
     results: list[dict[str, Any]]
 
 
@@ -139,3 +140,28 @@ class FeedbackResponse(BaseModel):
     event_id: str
     feedback_type: str
     message: str
+
+
+class ChatMessage(BaseModel):
+    role: str = Field(..., description="Role: 'user' | 'assistant' | 'system'")
+    content: str = Field(..., description="Message content")
+
+
+class CodeChatRequest(BaseModel):
+    question: str = Field(..., description="User question about code, diff, or security findings")
+    filepath: Optional[str] = Field(None, description="Path or name of active file")
+    file_code: Optional[str] = Field(None, description="Original source code of active file")
+    proposed_fix: Optional[str] = Field(None, description="Proposed verified fix / diff")
+    security_findings: Optional[list[dict[str, Any]]] = Field(default_factory=list, description="Security findings / OWASP issues")
+    history: Optional[list[ChatMessage]] = Field(default_factory=list, description="Previous messages in the conversation")
+    model: Optional[str] = Field("qwen-2.5-coder-32b", description="Target LLM model identifier")
+
+
+class CodeChatResponse(BaseModel):
+    answer: str = Field(..., description="LLM generated answer")
+    model_used: str = Field(..., description="Model used to generate response")
+    provider_used: str = Field(..., description="Provider used (groq, gemini, ollama, rule-engine)")
+    line_references: list[int] = Field(default_factory=list, description="Line numbers referenced in the answer")
+    files_referenced: list[str] = Field(default_factory=list, description="Files referenced in the answer")
+    status: str = "completed"
+

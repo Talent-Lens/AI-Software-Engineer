@@ -159,6 +159,7 @@ export const App: React.FC = () => {
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(true);
 
   // Pipeline Execution State
   const [pipelineState, setPipelineState] = useState<PipelineExecutionState>({
@@ -330,6 +331,8 @@ export const App: React.FC = () => {
         activeView={currentView}
         onSelectView={setCurrentView}
         onOpenGuide={() => setIsGuideOpen(true)}
+        isChatOpen={isChatOpen}
+        onToggleChat={() => setIsChatOpen(!isChatOpen)}
       />
 
       {/* Main Workbench Body Area */}
@@ -347,6 +350,9 @@ export const App: React.FC = () => {
               pipelineState={pipelineState}
               onRunPipeline={handleRunPipeline}
               onOpenGuide={() => setIsGuideOpen(true)}
+              isChatOpen={isChatOpen}
+              onToggleChat={() => setIsChatOpen(!isChatOpen)}
+              activeModel={activeModel}
             />
           )}
         </main>
@@ -366,6 +372,8 @@ export const App: React.FC = () => {
           isExecuting={pipelineState.isExecuting}
           activeNodeName={pipelineState.nodes[pipelineState.activeNodeId || 'detect']?.name}
           isBackendConnected={isBackendConnected}
+          isChatOpen={isChatOpen}
+          onToggleChat={() => setIsChatOpen(!isChatOpen)}
         />
       )}
     </div>
@@ -373,3 +381,4 @@ export const App: React.FC = () => {
 };
 
 export default App;
+

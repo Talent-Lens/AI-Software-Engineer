@@ -43,6 +43,7 @@ export interface RAGTriadMetrics {
   meanContextRecall: number;
   meanContextPrecision: number;
   meanFaithfulness: number;
+  meanF1Score?: number;
   meanMrr: number;
   hitsAt1Rate: number;
   hitsAt3Rate: number;
@@ -56,6 +57,7 @@ export interface BenchmarkTestCase {
   contextRecall: number;
   contextPrecision: number;
   faithfulness: number;
+  f1Score?: number;
   reciprocalRank: number;
   hitsAt1: number;
   hitsAt3: number;
@@ -77,4 +79,47 @@ export interface UserFeedbackRequest {
   user_action: 'accept' | 'reject';
   feedback_note?: string;
   user_id?: string;
+}
+
+export type ChecklistStatus = 'PASS' | 'FAIL' | 'MANUAL_REVIEW' | 'NOT_APPLICABLE';
+export type ChecklistSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
+
+export interface ChecklistItem {
+  id: string;
+  title: string;
+  category: string;
+  status: ChecklistStatus;
+  severity: ChecklistSeverity;
+  explanation: string;
+  remediation: string;
+  filePath?: string;
+  file_path?: string;
+  lineNumber?: number;
+  line_number?: number;
+  snippet?: string;
+  manualReviewReason?: string;
+  manual_review_reason?: string;
+}
+
+export interface LaunchChecklistReport {
+  timestamp: string;
+  totalChecks: number;
+  total_checks?: number;
+  passedCount: number;
+  passed_count?: number;
+  failedCount: number;
+  failed_count?: number;
+  manualReviewCount: number;
+  manual_review_count?: number;
+  notApplicableCount: number;
+  not_applicable_count?: number;
+  readinessPercentage: number;
+  readiness_percentage?: number;
+  grade: string;
+  launchStatus: 'LAUNCH_READY' | 'NEEDS_REVIEW' | 'BLOCK_DEPLOYMENT';
+  launch_status?: string;
+  summary: string;
+  items: ChecklistItem[];
+  categorySummary?: Record<string, { total: number; passed: number; failed: number; manual: number; na: number }>;
+  category_summary?: Record<string, { total: number; passed: number; failed: number; manual: number; na: number }>;
 }

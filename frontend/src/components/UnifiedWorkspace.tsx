@@ -40,13 +40,16 @@ import {
   ArrowRight,
   PanelLeft,
   PanelLeftClose,
-  ChevronRight
+  ChevronRight,
+  MessageSquareCode,
+  Bot
 } from 'lucide-react';
 import { DiffEditor } from '@monaco-editor/react';
 import { CodeFile, PipelineExecutionState } from '../types';
 import { analyzeCodeFile } from '../utils/codeAnalyzer';
 import { submitUserFeedback, analyzeGithubRepository } from '../services/api';
 import { ExplorerPanel } from './ExplorerPanel';
+import { CodeChatPanel } from './CodeChatPanel';
 
 interface UnifiedWorkspaceProps {
   files: CodeFile[];
@@ -57,6 +60,9 @@ interface UnifiedWorkspaceProps {
   pipelineState: PipelineExecutionState;
   onRunPipeline: () => void;
   onOpenGuide?: () => void;
+  isChatOpen?: boolean;
+  onToggleChat?: () => void;
+  activeModel?: string;
 }
 
 const VERIFICATION_STEPS = [
@@ -113,9 +119,12 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
   pipelineState,
   onRunPipeline,
   onOpenGuide,
+  isChatOpen: externalChatOpen,
+  onToggleChat: externalToggleChat,
+  activeModel,
 }) => {
   // Current Workflow Stage: 'input' | 'scanning' | 'results'
-  const [stage, setStage] = useState<'input' | 'scanning' | 'results'>('input');
+  const [stage, setStage] = useState<'input' | 'scanning' | 'results'>(files && files.length > 0 ? 'results' : 'input');
   const [inputTab, setInputTab] = useState<'upload' | 'github' | 'snippet'>('upload');
 
   // IDE Panel Layout States
@@ -140,8 +149,19 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
   // Results Stage State
   const [showDetailsDrawer, setShowDetailsDrawer] = useState<boolean>(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState<'sast' | 'pytest'>('sast');
+  const [internalChatOpen, setInternalChatOpen] = useState<boolean>(true);
+  const showChatPanel = externalChatOpen !== undefined ? externalChatOpen : internalChatOpen;
+  const handleToggleChat = () => {
+    if (externalToggleChat) {
+      externalToggleChat();
+    } else {
+      setInternalChatOpen(!internalChatOpen);
+    }
+  };
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [copiedBreadcrumb, setCopiedBreadcrumb] = useState<boolean>(false);
+
+
 
   // GitHub PR Modal State
   const [showPrModal, setShowPrModal] = useState<boolean>(false);
@@ -1076,6 +1096,22 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
                 <span>{copiedCode ? 'Copied' : 'Copy'}</span>
               </button>
 
+              {/* Ask AI / Q&A Toggle */}
+              <button
+                onClick={handleToggleChat}
+                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl font-medium cursor-pointer transition-all shadow-sm ${
+                  showChatPanel
+                    ? 'bg-indigo-600/20 border border-indigo-500/50 text-indigo-300'
+                    : 'bg-[#181a26] hover:bg-[#202333] border border-[#262a3d] text-[#cbd5e1]'
+                }`}
+                title="Toggle Code Q&A Assistant"
+              >
+                <MessageSquareCode className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Ask AI</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              </button>
+
+
               {/* Ghost Action: Scan New */}
               <button
                 onClick={() => setStage('input')}
@@ -1085,6 +1121,7 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Scan New</span>
               </button>
+
             </div>
 
           </div>
@@ -1208,14 +1245,24 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setShowDetailsDrawer(!showDetailsDrawer)}
-                  className="flex items-center space-x-1.5 text-xs text-indigo-300 hover:text-white cursor-pointer font-medium"
-                >
-                  <FileCheck className="w-3.5 h-3.5" />
-                  <span>{showDetailsDrawer ? 'Hide Security Details' : 'View Security Findings & Proof'}</span>
-                  {showDetailsDrawer ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                </button>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={handleToggleChat}
+                    className="flex items-center space-x-1.5 text-xs text-indigo-300 hover:text-white cursor-pointer font-medium px-2 py-0.5 rounded-md hover:bg-[#1c2030] transition-colors"
+                  >
+                    <MessageSquareCode className="w-3.5 h-3.5" />
+                    <span>{showChatPanel ? 'Hide Q&A' : 'Ask Questions About Code'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowDetailsDrawer(!showDetailsDrawer)}
+                    className="flex items-center space-x-1.5 text-xs text-indigo-300 hover:text-white cursor-pointer font-medium"
+                  >
+                    <FileCheck className="w-3.5 h-3.5" />
+                    <span>{showDetailsDrawer ? 'Hide Security Details' : 'View Security Findings & Proof'}</span>
+                    {showDetailsDrawer ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
               {/* Monaco Diff with Minimap & Unchanged Code Folding */}
@@ -1386,10 +1433,36 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
 
             </div>
 
+            {/* Right-Dock Context-Aware Code Q&A Panel */}
+            {showChatPanel && (
+              <CodeChatPanel
+                currentFile={currentFile}
+                isOpen={showChatPanel}
+                onClose={handleToggleChat}
+                onJumpToLine={handleJumpToLine}
+                activeModel={activeModel}
+              />
+            )}
+
+            {/* Floating Re-open Button when Chat Panel is closed */}
+            {!showChatPanel && (
+              <button
+                onClick={handleToggleChat}
+                className="absolute bottom-5 right-5 z-40 px-3.5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xl shadow-indigo-950/80 flex items-center space-x-2 border border-indigo-400/40 hover:scale-105 transition-all cursor-pointer animate-fadeIn"
+                title="Ask Questions About Code (Qwen-2.5 Coder 32B)"
+              >
+                <MessageSquareCode className="w-4 h-4" />
+                <span>Ask Questions About Code</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              </button>
+            )}
+
+
           </div>
 
         </div>
       )}
+
 
       {/* GitHub PR Modal */}
       {showPrModal && (

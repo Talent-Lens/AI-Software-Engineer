@@ -251,6 +251,20 @@ class SecurityASTScanner(ast.NodeVisitor):
                     remediation="DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'",
                 )
 
+        # A03: SQL Injection in f-string query assignments
+        if isinstance(node.value, ast.JoinedStr):
+            line_str = self._get_line_snippet(node.lineno).upper()
+            if any(kw in line_str for kw in ("SELECT ", "INSERT INTO ", "UPDATE ", "DELETE FROM ")):
+                self._add_vulnerability(
+                    owasp_code="A03",
+                    title="SQL Injection Risk via Formatted F-String Query",
+                    severity="Critical",
+                    line_no=node.lineno,
+                    snippet=self._get_line_snippet(node.lineno),
+                    description="Constructing raw SQL queries via f-string formatting invites SQL injection attacks.",
+                    remediation="Use parameterized query placeholders e.g. cursor.execute('SELECT * FROM tbl WHERE id = %s', (val,))",
+                )
+
         self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call):

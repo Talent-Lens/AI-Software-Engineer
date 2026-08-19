@@ -67,9 +67,15 @@ async def run_eval_suite(
             hits_at_3_rate=report.hits_at_3_rate,
             hits_at_5_rate=report.hits_at_5_rate,
             hits_at_10_rate=report.hits_at_10_rate,
+            metrics=report.to_dict()["metrics"],
             results=results_list,
         )
 
+    except FileNotFoundError as fnf_err:
+        logger.warning("Test cases file not found: %s", fnf_err)
+        raise HTTPException(status_code=404, detail=str(fnf_err))
+    except HTTPException:
+        raise
     except Exception as err:
         logger.error("Error executing eval suite: %s", err, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Evaluation runner failed: {err}")

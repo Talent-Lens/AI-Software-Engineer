@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routers import health, analyze, retrieval, eval as eval_router, agents, feedback, analytics, github, telemetry
+from src.api.routers import health, analyze, retrieval, eval as eval_router, agents, feedback, analytics, github, telemetry, chat
 from src.api.websockets import manager, stream_pipeline_execution
 from src.db.session import init_db
 from src.telemetry.middleware import TelemetryMiddleware
@@ -69,6 +69,8 @@ app.include_router(feedback.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(github.router, prefix="/api/v1")
 app.include_router(telemetry.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
+
 
 
 @app.api_route("/", methods=["GET", "HEAD"])

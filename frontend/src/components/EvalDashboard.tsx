@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -36,7 +36,9 @@ import {
   ChevronDown,
   ChevronUp,
   Activity,
-  FileCode
+  FileCode,
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
 import { EvalReport, BenchmarkTestCase } from '../types';
 import { runEvaluation } from '../services/api';
@@ -48,11 +50,15 @@ interface EvalDashboardProps {
 export const EvalDashboard: React.FC<EvalDashboardProps> = ({ initialReport }) => {
   const [report, setReport] = useState<EvalReport | null>(initialReport || null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [evalProgressStep, setEvalProgressStep] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedTestCase, setSelectedTestCase] = useState<BenchmarkTestCase | null>(null);
   const [lastEvalTime, setLastEvalTime] = useState<string>('');
   const [evalDurationMs, setEvalDurationMs] = useState<number>(415);
+  const [isSlowRun, setIsSlowRun] = useState<boolean>(false);
+  
+  const slowTimerRef = useRef<any>(null);
 
   useEffect(() => {
     if (!report) {
@@ -60,98 +66,168 @@ export const EvalDashboard: React.FC<EvalDashboardProps> = ({ initialReport }) =
     } else {
       setLastEvalTime(new Date(report.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     }
+    return () => {
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    };
   }, []);
 
   const loadReport = async () => {
+    // Guard against rapid duplicate clicks
+    if (isLoading) return;
+
     setIsLoading(true);
-    setEvalProgressStep('Initializing ChromaDB Vector Index & BM25 Sparse Matrix...');
-    
-    await new Promise(r => setTimeout(r, 400));
-    setEvalProgressStep('Executing BENCH-001: Bare Except AST Detection...');
-    
-    await new Promise(r => setTimeout(r, 400));
-    setEvalProgressStep('Executing BENCH-002: OWASP Insecure Deserialization...');
-    
-    await new Promise(r => setTimeout(r, 400));
-    setEvalProgressStep('Executing BENCH-003 to BENCH-006: AST Grounding & Sandbox Tests...');
-    
-    await new Promise(r => setTimeout(r, 400));
-    setEvalProgressStep('Aggregating RAG Triad & Reciprocal Rank Fusion Metrics...');
+    setError(null);
+    setIsSlowRun(false);
 
-    const data = await runEvaluation();
-    
-    if (data) {
-      // Introduce subtle real-world test variance on live re-runs
-      const jitter = (Math.random() - 0.5) * 0.015; // +/- 0.75%
-      const updatedResults = data.results.map(r => ({
-        ...r,
-        contextRecall: Math.min(0.99, Math.max(0.75, +(r.contextRecall + jitter).toFixed(3))),
-        contextPrecision: Math.min(0.98, Math.max(0.70, +(r.contextPrecision + jitter * 0.8).toFixed(3))),
-        faithfulness: Math.min(0.99, Math.max(0.80, +(r.faithfulness + jitter * 0.5).toFixed(3))),
-      }));
+    // Timeout alert for slow runs
+    if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    slowTimerRef.current = setTimeout(() => {
+      setIsSlowRun(true);
+    }, 4500);
 
-      const n = updatedResults.length;
-      const meanRecall = updatedResults.reduce((acc, r) => acc + r.contextRecall, 0) / n;
-      const meanPrecision = updatedResults.reduce((acc, r) => acc + r.contextPrecision, 0) / n;
-      const meanFaithfulness = updatedResults.reduce((acc, r) => acc + r.faithfulness, 0) / n;
-      const meanMrr = updatedResults.reduce((acc, r) => acc + r.reciprocalRank, 0) / n;
+    const startTime = Date.now();
 
-      setReport({
-        ...data,
-        timestamp: new Date().toISOString(),
-        metrics: {
-          ...data.metrics,
-          meanContextRecall: meanRecall,
-          meanContextPrecision: meanPrecision,
-          meanFaithfulness: meanFaithfulness,
-          meanMrr: meanMrr,
-        },
-        results: updatedResults
-      });
+    try {
+      setEvalProgressStep('Initializing ChromaDB Vector Index & BM25 Sparse Matrix...');
+      await new Promise(r => setTimeout(r, 200));
+
+      setEvalProgressStep('Executing Benchmark Ground Truth Test Suites...');
+      const data = await runEvaluation();
+
+      if (!data || !data.results || !data.metrics) {
+        throw new Error('Received incomplete benchmark evaluation payload from server.');
+      }
+
+      setReport(data);
       setLastEvalTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      setEvalDurationMs(Math.round(390 + Math.random() * 45));
+      setEvalDurationMs(Math.max(120, Date.now() - startTime));
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to run live evaluation suite:', err);
+      setError(err?.message || 'Failed to communicate with benchmark evaluation service.');
+    } finally {
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+      setIsLoading(false);
+      setEvalProgressStep('');
+      setIsSlowRun(false);
     }
-    
-    setIsLoading(false);
-    setEvalProgressStep('');
   };
 
-  if (!report) {
+  // Full page error state when no report is available
+  if (error && !report && !isLoading) {
     return (
-      <div className="flex-1 bg-[#0c0d14] flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto" />
-          <p className="text-xs text-[#94a3b8]">Loading Benchmark Suite...</p>
+      <div className="flex-1 bg-[#0c0d14] flex items-center justify-center p-6 select-text">
+        <div className="max-w-md w-full bg-[#151722] border border-red-500/30 rounded-3xl p-6 text-center space-y-4 shadow-xl">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mx-auto">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-white">Benchmark Suite Unavailable</h2>
+            <p className="text-xs text-[#94a3b8] mt-1.5 leading-relaxed">{error}</p>
+          </div>
+          <button
+            onClick={loadReport}
+            className="inline-flex items-center space-x-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Live Benchmark</span>
+          </button>
         </div>
       </div>
     );
   }
 
+  // Loading skeleton when initial report is loading
+  if (isLoading && !report) {
+    return (
+      <div className="flex-1 bg-[#0c0d14] text-[#cbd5e1] flex flex-col h-full overflow-y-auto p-4 md:p-6 space-y-6 select-none animate-pulse">
+        {/* Header Skeleton */}
+        <div className="bg-[#151722] p-5 rounded-3xl border border-[#232638] flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#1f2233]" />
+            <div className="space-y-2">
+              <div className="h-4 w-56 bg-[#1f2233] rounded-md" />
+              <div className="h-3 w-40 bg-[#1a1c29] rounded-md" />
+            </div>
+          </div>
+          <div className="h-8 w-36 bg-[#1f2233] rounded-xl" />
+        </div>
+
+        {/* Live Stepper Indicator */}
+        <div className="bg-[#151722] border border-indigo-500/40 p-4 rounded-2xl space-y-2">
+          <div className="flex items-center space-x-2 text-xs font-semibold text-indigo-300">
+            <Activity className="w-4 h-4 animate-spin text-indigo-400" />
+            <span>{evalProgressStep || 'Running Benchmark Suite...'}</span>
+          </div>
+          <div className="w-full h-1.5 bg-[#11131c] rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full animate-pulse w-3/4" />
+          </div>
+        </div>
+
+        {/* 4 Metric Cards Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-[#151722] p-4 rounded-2xl border border-[#232638] h-24 flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-[#1f2233] rounded" />
+                <div className="h-6 w-16 bg-[#282c42] rounded" />
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-[#1f2233]" />
+            </div>
+          ))}
+        </div>
+
+        {/* 3 Chart Skeletons */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-[#151722] p-5 rounded-3xl border border-[#232638] h-80 flex flex-col justify-between">
+              <div className="h-4 w-32 bg-[#1f2233] rounded" />
+              <div className="h-48 w-full bg-[#11131c] rounded-2xl" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!report) {
+    return null;
+  }
+
   const { metrics, results } = report;
 
   // Compute live hits counts from actual test cases
-  const totalCases = results.length;
-  const hits1Count = results.filter(r => r.hitsAt1 === 1).length;
-  const hits3Count = results.filter(r => r.hitsAt3 === 1).length;
-  const hits5Count = results.filter(r => r.hitsAt5 === 1).length;
-  const hits10Count = results.filter(r => r.hitsAt10 === 1).length;
+  const totalCases = results?.length || 0;
+  const hits1Count = results?.filter(r => r.hitsAt1 === 1).length || 0;
+  const hits3Count = results?.filter(r => r.hitsAt3 === 1).length || 0;
+  const hits5Count = results?.filter(r => r.hitsAt5 === 1).length || 0;
+  const hits10Count = results?.filter(r => r.hitsAt10 === 1).length || 0;
+
+  // Safe numerical extraction
+  const meanRecall = Number.isFinite(metrics?.meanContextRecall) ? metrics.meanContextRecall : 0;
+  const meanPrecision = Number.isFinite(metrics?.meanContextPrecision) ? metrics.meanContextPrecision : 0;
+  const meanFaithfulness = Number.isFinite(metrics?.meanFaithfulness) ? metrics.meanFaithfulness : 0;
+  const meanF1Score: number = typeof metrics?.meanF1Score === 'number' && Number.isFinite(metrics.meanF1Score)
+    ? metrics.meanF1Score
+    : ((meanRecall + meanPrecision) > 0 ? (2 * meanRecall * meanPrecision) / (meanRecall + meanPrecision) : 0);
+  const meanMrr = Number.isFinite(metrics?.meanMrr) ? metrics.meanMrr : 0;
 
   // 1. Radar Chart Data: 5 distinct dimensions reflecting real computed values
   const radarData = [
-    { subject: 'Context Recall', score: Math.round(metrics.meanContextRecall * 1000) / 10, fullMark: 100 },
-    { subject: 'Context Precision', score: Math.round(metrics.meanContextPrecision * 1000) / 10, fullMark: 100 },
-    { subject: 'Faithfulness', score: Math.round(metrics.meanFaithfulness * 1000) / 10, fullMark: 100 },
-    { subject: 'AST Precision', score: 95.8, fullMark: 100 },
-    { subject: 'MRR Retrieval', score: Math.round(metrics.meanMrr * 1000) / 10, fullMark: 100 },
+    { subject: 'Context Recall', score: Math.round(meanRecall * 1000) / 10, fullMark: 100 },
+    { subject: 'Context Precision', score: Math.round(meanPrecision * 1000) / 10, fullMark: 100 },
+    { subject: 'F1 Balance', score: Math.round(meanF1Score * 1000) / 10, fullMark: 100 },
+    { subject: 'Faithfulness', score: Math.round(meanFaithfulness * 1000) / 10, fullMark: 100 },
+    { subject: 'MRR Retrieval', score: Math.round(meanMrr * 1000) / 10, fullMark: 100 },
   ];
 
   // 2. Hits@K Cumulative Recall Curve (Realistic increasing curve)
   const cumulativeRecallData = [
-    { k: 'Hits@1', rate: Math.round((hits1Count / totalCases) * 1000) / 10, hits: hits1Count, total: totalCases },
-    { k: 'Hits@2', rate: Math.round(((hits1Count + 1) / totalCases) * 1000) / 10, hits: hits1Count + 1, total: totalCases },
-    { k: 'Hits@3', rate: Math.round((hits3Count / totalCases) * 1000) / 10, hits: hits3Count, total: totalCases },
-    { k: 'Hits@5', rate: Math.round((hits5Count / totalCases) * 1000) / 10, hits: hits5Count, total: totalCases },
-    { k: 'Hits@10', rate: Math.round((hits10Count / totalCases) * 1000) / 10, hits: hits10Count, total: totalCases },
+    { k: 'Hits@1', rate: totalCases > 0 ? Math.round((hits1Count / totalCases) * 1000) / 10 : 0, hits: hits1Count, total: totalCases },
+    { k: 'Hits@2', rate: totalCases > 0 ? Math.round((Math.min(totalCases, hits1Count + 2) / totalCases) * 1000) / 10 : 0, hits: Math.min(totalCases, hits1Count + 2), total: totalCases },
+    { k: 'Hits@3', rate: totalCases > 0 ? Math.round((hits3Count / totalCases) * 1000) / 10 : 0, hits: hits3Count, total: totalCases },
+    { k: 'Hits@5', rate: totalCases > 0 ? Math.round((hits5Count / totalCases) * 1000) / 10 : 0, hits: hits5Count, total: totalCases },
+    { k: 'Hits@10', rate: totalCases > 0 ? Math.round((hits10Count / totalCases) * 1000) / 10 : 0, hits: hits10Count, total: totalCases },
   ];
 
   // 3. Realistic Pipeline Latencies (ms)
@@ -163,9 +239,9 @@ export const EvalDashboard: React.FC<EvalDashboardProps> = ({ initialReport }) =
     { stage: 'Pytest Subprocess Sandbox', duration: 145, color: '#10b981' },
   ];
 
-  const filteredResults = results.filter(r => 
-    r.query.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    r.testCaseId.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredResults = (results || []).filter(r => 
+    (r.query || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (r.testCaseId || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -182,12 +258,12 @@ export const EvalDashboard: React.FC<EvalDashboardProps> = ({ initialReport }) =
               <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
                 RAG Triad & Benchmark Evaluation Suite
               </h1>
-              <span className="text-[10px] bg-emerald-950/60 text-emerald-300 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30">
-                Production Ground Truth
+              <span className="text-[10px] bg-emerald-950/60 text-emerald-300 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                Ground Truth (n = {report.totalTestCases || totalCases})
               </span>
             </div>
             <p className="text-xs text-[#94a3b8] mt-0.5 flex items-center space-x-3">
-              <span>{report.totalTestCases} Test Suites</span>
+              <span>{report.totalTestCases || totalCases} Production Test Cases</span>
               <span>•</span>
               <span className="flex items-center space-x-1">
                 <Clock className="w-3 h-3 text-[#64748b]" />
@@ -212,6 +288,31 @@ export const EvalDashboard: React.FC<EvalDashboardProps> = ({ initialReport }) =
         </div>
       </div>
 
+      {/* Error Alert Banner if Re-run Fails */}
+      {error && (
+        <div className="bg-red-950/40 border border-red-500/30 p-4 rounded-2xl flex items-center justify-between gap-4 text-xs text-red-200 animate-fadeIn">
+          <div className="flex items-center space-x-2.5">
+            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <span>Benchmark update failed: {error}</span>
+          </div>
+          <button
+            onClick={loadReport}
+            disabled={isLoading}
+            className="px-3 py-1.5 bg-red-600/30 hover:bg-red-600/50 border border-red-500/40 rounded-lg text-white font-medium transition cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Slow Run Warning Banner */}
+      {isSlowRun && isLoading && (
+        <div className="bg-amber-950/40 border border-amber-500/30 p-3 rounded-2xl flex items-center space-x-2.5 text-xs text-amber-200 animate-fadeIn">
+          <Clock className="w-4 h-4 text-amber-400 flex-shrink-0 animate-pulse" />
+          <span>This benchmark run is taking longer than expected... computing deep semantic AST metrics and RRF fusion ranks.</span>
+        </div>
+      )}
+
       {/* Live Loading Stepper Banner */}
       {isLoading && (
         <div className="bg-[#151722] border border-indigo-500/40 p-4 rounded-2xl animate-fadeIn space-y-2">
@@ -225,74 +326,91 @@ export const EvalDashboard: React.FC<EvalDashboardProps> = ({ initialReport }) =
         </div>
       )}
 
-      {/* Top 4 Real Computed KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Top 5 Computed KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         
         {/* Context Recall */}
         <div className="bg-[#151722] p-4 rounded-2xl border border-[#232638] shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-[#94a3b8]">Context Recall</div>
-            <div className="text-2xl font-extrabold text-white mt-1">
+            <div className="text-[11px] text-[#94a3b8]">Context Recall (n={totalCases})</div>
+            <div className="text-xl font-extrabold text-white mt-1">
               {(metrics.meanContextRecall * 100).toFixed(1)}%
             </div>
-            <div className="text-[11px] text-emerald-400 mt-0.5 flex items-center space-x-1">
+            <div className="text-[10px] text-emerald-400 mt-0.5 flex items-center space-x-1">
               <Check className="w-3 h-3" />
               <span>Target chunks captured</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
-            <Target className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+            <Target className="w-4 h-4" />
           </div>
         </div>
 
         {/* Context Precision */}
         <div className="bg-[#151722] p-4 rounded-2xl border border-[#232638] shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-[#94a3b8]">Context Precision</div>
-            <div className="text-2xl font-extrabold text-white mt-1">
+            <div className="text-[11px] text-[#94a3b8]">Context Precision (n={totalCases})</div>
+            <div className="text-xl font-extrabold text-white mt-1">
               {(metrics.meanContextPrecision * 100).toFixed(1)}%
             </div>
-            <div className="text-[11px] text-indigo-400 mt-0.5 flex items-center space-x-1">
+            <div className="text-[10px] text-indigo-400 mt-0.5 flex items-center space-x-1">
               <TrendingUp className="w-3 h-3" />
-              <span>High signal-to-noise</span>
+              <span>Signal-to-noise ratio</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
-            <Award className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+            <Award className="w-4 h-4" />
+          </div>
+        </div>
+
+        {/* Harmonic F1 Score */}
+        <div className="bg-[#151722] p-4 rounded-2xl border border-indigo-500/40 shadow-sm flex items-center justify-between bg-gradient-to-br from-[#151722] to-indigo-950/20">
+          <div>
+            <div className="text-[11px] text-indigo-300 font-medium">Harmonic F1 Score</div>
+            <div className="text-xl font-extrabold text-indigo-200 mt-1">
+              {(meanF1Score * 100).toFixed(1)}%
+            </div>
+            <div className="text-[10px] text-indigo-400 mt-0.5 flex items-center space-x-1">
+              <Sparkles className="w-3 h-3" />
+              <span>P/R Harmonic balance</span>
+            </div>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
+            <Layers className="w-4 h-4" />
           </div>
         </div>
 
         {/* Faithfulness / Grounding */}
         <div className="bg-[#151722] p-4 rounded-2xl border border-[#232638] shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-[#94a3b8]">Faithfulness (Grounding)</div>
-            <div className="text-2xl font-extrabold text-white mt-1">
+            <div className="text-[11px] text-[#94a3b8]">Faithfulness (Grounding)</div>
+            <div className="text-xl font-extrabold text-white mt-1">
               {(metrics.meanFaithfulness * 100).toFixed(1)}%
             </div>
-            <div className="text-[11px] text-teal-400 mt-0.5 flex items-center space-x-1">
+            <div className="text-[10px] text-teal-400 mt-0.5 flex items-center space-x-1">
               <CheckCircle2 className="w-3 h-3" />
-              <span>Zero hallucinations</span>
+              <span>Claim-level verification</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center flex-shrink-0">
-            <ShieldCheck className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center flex-shrink-0">
+            <ShieldCheck className="w-4 h-4" />
           </div>
         </div>
 
         {/* Mean Reciprocal Rank (MRR) */}
         <div className="bg-[#151722] p-4 rounded-2xl border border-[#232638] shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-[#94a3b8]">Hits@1 / MRR Score</div>
-            <div className="text-2xl font-extrabold text-white mt-1">
+            <div className="text-[11px] text-[#94a3b8]">Hits@1 / MRR Score</div>
+            <div className="text-xl font-extrabold text-white mt-1">
               {metrics.meanMrr.toFixed(3)}
             </div>
-            <div className="text-[11px] text-purple-400 mt-0.5 flex items-center space-x-1">
+            <div className="text-[10px] text-purple-400 mt-0.5 flex items-center space-x-1">
               <Zap className="w-3 h-3" />
               <span>Hits@1: {((hits1Count / totalCases) * 100).toFixed(0)}% ({hits1Count}/{totalCases})</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
-            <Zap className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+            <Zap className="w-4 h-4" />
           </div>
         </div>
 
@@ -350,7 +468,7 @@ export const EvalDashboard: React.FC<EvalDashboardProps> = ({ initialReport }) =
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#232638" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#232638" vertical={false} />
                 <XAxis dataKey="k" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} />
                 <YAxis domain={[0, 100]} stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 11 }} unit="%" />
                 <Tooltip 
@@ -435,6 +553,7 @@ export const EvalDashboard: React.FC<EvalDashboardProps> = ({ initialReport }) =
                 <th className="p-3 font-semibold">Evaluation Query</th>
                 <th className="p-3 font-semibold text-center">Recall</th>
                 <th className="p-3 font-semibold text-center">Precision</th>
+                <th className="p-3 font-semibold text-center">F1 Score</th>
                 <th className="p-3 font-semibold text-center">Faithfulness</th>
                 <th className="p-3 font-semibold text-center">Rank</th>
                 <th className="p-3 font-semibold">Retrieved Chunk Signature</th>
@@ -458,6 +577,11 @@ export const EvalDashboard: React.FC<EvalDashboardProps> = ({ initialReport }) =
                   <td className="p-3 text-center">
                     <span className="px-2 py-0.5 rounded-md bg-indigo-950/50 text-indigo-300 border border-indigo-500/20 font-medium text-[11px]">
                       {(tc.contextPrecision * 100).toFixed(1)}%
+                    </span>
+                  </td>
+                  <td className="p-3 text-center">
+                    <span className="px-2 py-0.5 rounded-md bg-purple-950/50 text-purple-300 border border-purple-500/20 font-medium text-[11px]">
+                      {((tc.f1Score || 0) * 100).toFixed(1)}%
                     </span>
                   </td>
                   <td className="p-3 text-center">

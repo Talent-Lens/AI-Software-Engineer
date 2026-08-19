@@ -5,7 +5,8 @@ import {
   Clock, 
   Database,
   Activity,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquareCode
 } from 'lucide-react';
 import { CodeFile } from '../types';
 
@@ -15,6 +16,8 @@ interface StatusBarProps {
   activeNodeName?: string;
   isBackendConnected: boolean;
   totalExecutionMs?: number;
+  isChatOpen?: boolean;
+  onToggleChat?: () => void;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -23,6 +26,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   activeNodeName,
   isBackendConnected,
   totalExecutionMs = 415,
+  isChatOpen,
+  onToggleChat,
 }) => {
   return (
     <footer className="h-6 bg-[#0e1017] text-[#94a3b8] border-t border-[#232638] flex items-center justify-between px-3 text-[11px] select-none z-30 font-mono">
@@ -38,6 +43,17 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           <span>AST Verified (0 Errors)</span>
         </div>
 
+        {onToggleChat && (
+          <button
+            onClick={onToggleChat}
+            className="flex items-center space-x-1 text-indigo-300 hover:text-white px-2 py-0.5 rounded hover:bg-[#1c2030] cursor-pointer transition-colors"
+            title="Toggle Code Q&A Assistant"
+          >
+            <MessageSquareCode className="w-3 h-3 text-indigo-400" />
+            <span>Ask Qwen (32B)</span>
+          </button>
+        )}
+
         {isExecuting && (
           <div className="flex items-center space-x-1.5 bg-indigo-950/60 border border-indigo-500/40 px-2 py-0.5 rounded text-indigo-200">
             <Activity className="w-3 h-3 text-indigo-400 animate-spin" />
@@ -45,6 +61,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           </div>
         )}
       </div>
+
 
       {/* Right status items */}
       <div className="flex items-center space-x-4">

@@ -112,3 +112,47 @@ async def manual_pr_review(
     except Exception as err:
         logger.error("Failed to manually review PR: %s", err, exc_info=True)
         raise HTTPException(status_code=500, detail=str(err))
+
+
+class AnalyzeRepoRequest(BaseModel):
+    repo_url: str = Field(..., description="GitHub repository URL (e.g. https://github.com/owner/repository)")
+    token: Optional[str] = Field(None, description="Optional GitHub Personal Access Token")
+    max_files: Optional[int] = Field(10, description="Max files to analyze")
+
+
+@router.post("/github/analyze-repo")
+async def analyze_github_repository_endpoint(
+    request: AnalyzeRepoRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Clones/fetches and analyzes a public or private GitHub repository,
+    performing AST bug detection and SAST security auditing on all code files.
+    """
+    from src.api.services.github_service import fetch_and_analyze_repository
+    
+    if not request.repo_url or not request.repo_url.strip():
+        raise HTTPException(status_code=400, detail="Repository URL is required.")
+
+    try:
+        result = await fetch_and_analyze_repository(
+            repo_url=request.repo_url.strip(),
+            token=request.token,
+            max_files=request.max_files or 10,
+            db=db,
+        )
+        return result
+    except ValueError as err:
+        error_msg = str(err)
+        if "not found" in error_msg.lower():
+            raise HTTPException(status_code=404, detail=error_msg)
+        elif "rate limit" in error_msg.lower() or "access denied" in error_msg.lower():
+            raise HTTPException(status_code=403, detail=error_msg)
+        elif "no supported source code files" in error_msg.lower():
+            raise HTTPException(status_code=422, detail=error_msg)
+        else:
+            raise HTTPException(status_code=400, detail=error_msg)
+    except Exception as err:
+        logger.error("Unexpected error in analyze_github_repository: %s", err, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to analyze repository: {err}")
+

@@ -1,11 +1,11 @@
-import React from 'react';
 import { 
   ShieldCheck, 
   Cpu, 
   HelpCircle, 
   BarChart3,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  MessageSquareCode
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -18,6 +18,8 @@ interface HeaderProps {
   activeView?: 'workspace' | 'eval';
   onSelectView?: (view: 'workspace' | 'eval') => void;
   onOpenGuide?: () => void;
+  isChatOpen?: boolean;
+  onToggleChat?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,7 +32,10 @@ export const Header: React.FC<HeaderProps> = ({
   activeView = 'workspace',
   onSelectView,
   onOpenGuide,
+  isChatOpen,
+  onToggleChat,
 }) => {
+
   return (
     <header className="bg-[#11131c] border-b border-[#232638] px-4 md:px-6 h-14 flex items-center justify-between z-30 select-none shadow-sm">
       {/* Left Brand Identity */}
@@ -96,6 +101,23 @@ export const Header: React.FC<HeaderProps> = ({
           </select>
         </div>
 
+        {/* Ask AI (Q&A) Toggle Button */}
+        {onToggleChat && (
+          <button
+            onClick={onToggleChat}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+              isChatOpen
+                ? 'bg-indigo-600 border-indigo-400 text-white shadow-indigo-950/50'
+                : 'bg-[#1c2030] hover:bg-[#252a40] border-[#2d334d] text-indigo-200 hover:text-white'
+            }`}
+            title="Ask Questions About the Code (Qwen-2.5 Coder 32B)"
+          >
+            <MessageSquareCode className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Ask AI</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          </button>
+        )}
+
         {/* How It Works / Onboarding Guide Button */}
         {onOpenGuide && (
           <button
@@ -107,6 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span>How It Works</span>
           </button>
         )}
+
 
       </div>
     </header>

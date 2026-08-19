@@ -1,151 +1,255 @@
-<div align="center">
+# CodeGuardian — Autonomous AI Code Security & Verification Engine
 
-# 🛡️ CodeGuardian
-### **Autonomous Multi-Agent AI Security & Verification Engine**
-
-```
- ⚡ 7-Node LangGraph DAG   •   🌳 Tree-Sitter AST Parsing   •   🧪 Pytest Subprocess Sandbox
-```
+CodeGuardian is an autonomous multi-agent code analysis and repair platform. It combines Tree-Sitter AST parsing, hybrid dense-sparse code retrieval, SAST vulnerability scanning (OWASP Top 10), and an isolated subprocess sandbox to automatically detect software bugs, eliminate hallucinated line citations in AI explanations, verify proposed code fixes with automated unit tests, and post review comments to GitHub Pull Requests.
 
 ---
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18.2.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.2.2-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.0.25-FF6F61?style=for-the-badge)](https://python.langchain.com/docs/langgraph)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+## Architecture & Pipeline
 
----
-
-</div>
-
-> [!IMPORTANT]
-> **CodeGuardian** is an enterprise AI platform built to audit codebases for **OWASP Top 10 vulnerabilities**, eliminate **LLM line citation hallucinations** using Tree-Sitter AST syntax trees, and issue **auto-verified GitHub Pull Requests**.
-
----
-
-## 📌 Executive Summary Card
-
-| Core Pillar | Technology | Value Delivered |
-| :--- | :--- | :--- |
-| 🤖 **Multi-Agent Flow** | **LangGraph DAG (7 Nodes)** | Autonomous step-by-step auditing, verification, and sandboxed test generation. |
-| 🌳 **AST Code Grounding** | **Tree-Sitter Parser** | 100% verified line-number citations (Zero LLM hallucinations). |
-| ⚡ **Hybrid Search RAG** | **Dense Embeddings + Sparse BM25** | Reciprocal Rank Fusion ($k=60$) across large codebase repositories. |
-| 🧪 **Code Verification** | **Pytest Subprocess Sandbox** | Executes suggested code fixes in isolated sandboxes with exit code validation. |
-| 🤖 **Automated CI/CD** | **GitHub Actions & Webhooks** | Posts inline AST security audit comments directly on real GitHub PR diffs. |
-
----
-
-## 🏗️ System Architecture
+CodeGuardian executes code analysis through a structured multi-stage verification pipeline:
 
 ```mermaid
-graph LR
-    A[📁 Codebase / GitHub] --> B[🌳 Tree-Sitter AST]
-    B --> C[⚡ RRF Hybrid Search]
-    C --> D[🤖 7-Node LangGraph DAG]
-    D --> E[🟢 Verified Code Patch]
-    E --> F[🐙 GitHub Pull Request]
+flowchart TD
+    A["Source Code / Repository"] --> B["Multi-Language AST Chunker<br/>(Tree-Sitter: Python, JS, TS, Go, Java)"]
+    B --> C["Hybrid Vector & Lexical Index<br/>(ChromaDB Dense + BM25 Sparse)"]
+    C --> D["Reciprocal Rank Fusion (k=60)<br/>+ Cross-Encoder Re-Ranker"]
+    D --> E["LangGraph StateGraph Pipeline"]
+    
+    subgraph E ["LangGraph 3-Node StateGraph"]
+        E1["1. Bug Detection Agent<br/>(AST pattern scan + LLM analysis)"] --> E2["2. Review & Grounding Agent<br/>(Verifies line citations against AST)"]
+        E2 -- "Rejected (attempts < 3)" --> E1
+        E2 -- "Approved" --> E3["3. SAST Security Auditor<br/>(OWASP AST rule scanner)"]
+    end
+    
+    E --> F["Isolated Pytest Sandbox<br/>(Temporary directory execution)"]
+    F --> G["Verified Patch & GitHub PR Webhook"]
 ```
+
+### Pipeline Execution Stages
+
+1. **AST Chunking**: Parses source code using Tree-Sitter grammars (Python, JavaScript, TypeScript, Go, Java) into function/class-level AST blocks with parent-child hierarchical context.
+2. **Hybrid Retrieval**: Combines semantic embeddings (ChromaDB with `all-MiniLM-L6-v2`) and keyword scoring (Rank-BM25) using Reciprocal Rank Fusion ($k=60$), followed by Cross-Encoder re-ranking (`ms-marco-MiniLM-L-6-v2`).
+3. **LangGraph StateGraph Execution**:
+   - **`detect`**: Identifies AST defects (bare excepts, unhandled `None`, missing return types) and proposes patches.
+   - **`review`**: Verifies that line number citations in the LLM's explanation strictly match genuine AST line boundaries, rejecting hallucinated line references.
+   - **`security`**: Audits the file against SAST security rules (SQL injection, command injection, path traversal, unsafe deserialization/pickle, hardcoded secrets, SSRF).
+4. **Pytest Subprocess Sandbox**: Runs generated unit test suites in an isolated temporary directory with process timeout enforcement and exit-code validation.
+5. **Interactive UI / PR Automation**: Live React workbench with Monaco side-by-side diff viewer and automated GitHub PR webhook integration.
 
 ---
 
-## 🔄 3-Stage Developer Workflow
+## Installation & Setup
 
-| Stage | Name | Description | Key Components |
-| :---: | :--- | :--- | :--- |
-| **1** | **Input Page** | Drag & drop multi-files, enter GitHub repo URL, or paste code snippet. | Multi-File Dropzone, GitHub Loader |
-| **2** | **Live DAG Canvas** | Watch real-time execution across 7 agent nodes with pulsing glow lines. | Real-time SVG Canvas, Live Log Stream |
-| **3** | **Results Workbench** | Inspect side-by-side code diffs, SAST audit findings, and issue GitHub PRs. | Monaco Diff Editor, File Tree, PR Modal |
-
----
-
-## 🤖 7-Agent Verification Pipeline
-
-```
-  [1. Retrieval Agent]
-         │
-         ├───► [2. AST Bug Detector] ────► [4. Syntax Verifier] ────┐
-         │                                                            ├─► [6. Pytest Sandbox] ─► [7. Doc Auditor]
-         └───► [3. SAST Security Auditor] ─► [5. Line Verifier] ─────┘
-```
-
-> [!TIP]
-> **Why 7 Agents?** Single-prompt LLMs make mistakes. CodeGuardian divides work into 7 specialized nodes so that security scanning, syntax linting, line grounding, and unit testing validate each fix independently.
+### Prerequisites
+- **Python**: `3.9` or `3.10` (tested on 3.9.13 and 3.10)
+- **Node.js**: `18.x` or `20.x` with `npm`
+- **Git**
+- *(Optional)* **Ollama**: For 100% offline local LLM inference
 
 ---
 
-## 🛠️ Complete Tech Stack
+### 1. Backend Setup
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              FRONTEND WORKSPACE                             │
-│   React 18  •  TypeScript  •  Monaco Diff Editor  •  TailwindCSS  • Recharts  │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼ REST / WebSockets API
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                               BACKEND API ENGINE                            │
-│    FastAPI  •  Uvicorn  •  Pydantic v2  •  Python 3.10  •  ChromaDB RAG     │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼ Persistence & Telemetry
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           INFRASTRUCTURE & DATABASE                         │
-│  Supabase PostgreSQL  •  SQLAlchemy  •  Arize Phoenix  •  GitHub Actions    │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## ⚡ Quickstart Guide (3 Commands)
-
-### 1️⃣ Clone & Setup Virtual Environment
 ```bash
-git clone https://github.com/YourUsername/CodeGuardian.git
-cd CodeGuardian
-python -m venv venv && source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Clone repository
+git clone https://github.com/Talent-Lens/AI-Software-Engineer.git
+cd AI-Software-Engineer
+
+# Create and activate Python virtual environment
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
+# Install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 2️⃣ Start Backend Server
+---
+
+### 2. Frontend Setup
+
 ```bash
-python -m uvicorn src.api.server:app --port 8000 --reload
+cd frontend
+npm install
+cd ..
 ```
 
-### 3️⃣ Start Frontend UI
-```bash
-cd frontend && npm install && npm run dev
+---
+
+### 3. Environment Variables Configuration
+
+Create a `.env` file in the project root based on [`.env.example`](.env.example):
+
+```env
+# Database Configuration (Supabase PostgreSQL or fallback to local SQLite)
+SUPABASE_DB_URL=postgresql://postgres:your_password@your_db_host:5432/postgres
+
+# Cloud LLM API Keys (Required for cloud deployments; optional if running Ollama locally)
+# Get free Groq key: https://console.groq.com/keys
+GROQ_API_KEY=gsk_...
+# Get free Gemini key: https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=AIzaSy...
+
+# Local Ollama Settings (Optional for offline local development)
+OLLAMA_BASE_URL=http://localhost:11434
+DEFAULT_LLM_MODEL=qwen2.5-coder:7b
+
+# GitHub Integration (Optional for PR review bot)
+GITHUB_TOKEN=ghp_...
+GITHUB_WEBHOOK_SECRET=your_secret_key
 ```
-👉 Open `http://localhost:5173` in your browser.
+
+> **LLM Provider Note**:
+> - **Local Development**: If you have Ollama running locally (`ollama run qwen2.5:3b`), the system operates completely offline without external API keys.
+> - **Cloud Deployment (Render / Docker)**: Free cloud containers do not run Ollama. Set a `GROQ_API_KEY` (recommended for fast inference) or `GEMINI_API_KEY` in your hosting environment variables.
 
 ---
 
-## 📡 REST API Reference Table
+### 4. Running the Platform
 
-| Method | Endpoint | Purpose |
-| :---: | :--- | :--- |
-| `GET` | `/api/v1/health` | Backend status & AST engine health check. |
-| `POST` | `/api/v1/analyze` | Executes 7-node LangGraph analysis on target code. |
-| `POST` | `/api/v1/github/webhook` | Receives GitHub PR webhooks with HMAC SHA-256 validation. |
-| `POST` | `/api/v1/github/review-pr` | Triggers automated AI PR review comments on GitHub. |
-| `GET` | `/api/v1/eval/report` | Returns RAG Triad benchmark metrics & telemetry latency spans. |
-| `POST` | `/api/v1/feedback/submit` | Logs developer RLHF feedback (`Accept` / `Reject`). |
+#### Start Backend API Server
+```bash
+# From project root:
+python -m uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
+```
+Swagger UI will be accessible at `http://localhost:8000/docs`.
 
----
-
-## 👥 Engineering Team & Ownership
-
-Built as a high-impact engineering project by a 2-person team:
-
-| Team Member | Domain | Key Accomplishments |
-| :--- | :--- | :--- |
-| **Teammate 1 (You)** | **AI Systems & Full-Stack Lead** | • Built 7-Node LangGraph DAG & Tree-Sitter AST Grounding Parser.<br>• Designed 3-Stage React Workspace, SVG Canvas & Monaco Diff Viewer.<br>• Built GitHub Webhook Bot (`/api/v1/github/webhook`) & PR Creation API. |
-| **Teammate 2 (Partner)** | **Infrastructure & Database Lead** | • Built RAG Triad Benchmark Suite & Arize Phoenix Telemetry Tracing.<br>• Designed Supabase PostgreSQL schema (`SQLAlchemy`) for audit persistence.<br>• Implemented Pytest Subprocess Sandboxing. |
+#### Start Frontend UI
+```bash
+# In a separate terminal:
+cd frontend
+npm run dev
+```
+Open `http://localhost:5173` in your browser.
 
 ---
 
-<div align="center">
+## Usage Examples
 
-**CodeGuardian** • *Autonomous Multi-Agent AI Security Engine*
+### 1. Programmatic Pipeline Execution (Python)
 
-</div>
+```python
+from graph import run_pipeline
+
+result = run_pipeline("src/agents/bug_detection.py")
+
+print("Review Status:", result["review"]["approved"])
+print("Security Score:", result["security_response"]["details"]["scorecard"]["score"])
+print("Summary:", result["agent_response"]["summary"])
+```
+
+---
+
+### 2. Live REST API Calls
+
+#### Run Code Analysis & Verification
+```bash
+curl -X POST http://localhost:8000/api/v1/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"filepath": "src/api/server.py"}'
+```
+
+#### Run RAG Triad Live Benchmark Suite
+```bash
+curl -X POST http://localhost:8000/api/v1/eval/run \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+#### Context-Aware Code Q&A
+```bash
+curl -X POST http://localhost:8000/api/v1/chat/code \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Where are Bare Except handlers detected?",
+    "filepath": "src/agents/bug_detection.py",
+    "model": "qwen-2.5-coder-32b"
+  }'
+```
+
+#### SAST Security Audit
+```bash
+curl -X POST http://localhost:8000/api/v1/security/audit \
+  -H "Content-Type: application/json" \
+  -d '{"filepath": "src/agents/security_auditor.py"}'
+```
+
+---
+
+### 3. CLI Benchmark Runner
+
+```bash
+python src/eval/eval_runner.py
+```
+Exports `eval_report.json` and `eval_report.csv`.
+
+---
+
+## Evaluation & Benchmarks
+
+The retrieval and grounding pipeline is evaluated against a **25-case golden benchmark dataset** (`GOLDEN_BENCHMARK_DATASET` in `src/eval/eval_runner.py`), consisting of curated technical queries mapped to ground-truth AST target chunks, file paths, semantic keywords, and expected answers across the codebase.
+
+### Current Performance Metrics ($n = 25$ Golden Test Cases)
+
+| Metric | Measured Score | Evaluation Methodology |
+| :--- | :---: | :--- |
+| **Context Recall** | **`96.0%`** | 60% chunk ID / AST symbol presence + 40% ground-truth keyword coverage. |
+| **Context Precision (MAP)** | **`78.0%`** | Mean Average Precision of relevant AST chunks in ranked retrieval results. |
+| **Harmonic F1 Score** | **`83.3%`** | Harmonic mean of Precision ($0.78$) and Recall ($0.96$). |
+| **Faithfulness (Grounding)** | **`96.0%`** | Claim-level token grounding verifying technical statements against retrieved context. |
+| **Mean Reciprocal Rank (MRR)** | **`0.780`** | Reciprocal rank of first relevant chunk across test queries. |
+| **Hits@1 Rate** | **`64.0%`** | Target chunk retrieved as top-1 result (16 of 25 cases). |
+| **Hits@3 Rate** | **`96.0%`** | Target chunk present in top-3 results (24 of 25 cases). |
+| **Hits@5 Rate** | **`100.0%`** | Target chunk present in top-5 results (25 of 25 cases). |
+| **Hits@10 Rate** | **`100.0%`** | Target chunk present in top-10 results (25 of 25 cases). |
+| **Benchmark Execution Latency** | **`~415ms – 1200ms`** | Complete in-memory evaluation of all 25 cases. |
+
+---
+
+## Testing
+
+The test suite includes 22 test modules covering schema validation, AST chunking, LangGraph execution, SAST security rules, hybrid retrieval, database persistence, and API endpoints.
+
+```bash
+# Run unit & integration tests
+pytest tests/test_all.py -v
+
+# Run full test suite
+pytest tests/
+```
+
+### Verified Test Categories
+- `tests/test_all.py`: Core LangGraph pipeline, AST chunker, bug detection, review agent, test generation, and sandbox execution (31 passing unit tests).
+- `tests/test_eval_runner.py` & `tests/test_eval_suite.py`: Evaluation runner metrics calculation and `/api/v1/eval/run` endpoint contracts.
+- `tests/test_security_auditor.py`: OWASP AST security rule matching and vulnerability remediations.
+- `tests/test_hybrid_retriever.py` & `tests/test_reranker.py`: Dense + BM25 RRF fusion and Cross-Encoder re-ranking.
+- `tests/test_db_persistence.py`: SQLAlchemy session lifecycle and Supabase audit persistence.
+- `tests/test_github_webhook.py`: GitHub PR webhook HMAC signature verification and review automation.
+
+---
+
+## Known Limitations
+
+1. **Benchmark Sample Size ($n=25$)**: The current benchmark suite contains 25 curated golden test cases. While representative of the repository's core components, it is a focused evaluation suite rather than an exhaustive multi-thousand repository benchmark.
+2. **Context Precision vs. Recall Trade-Off**: Context Precision ($78.0\%$) reflects the intentional inclusion of parent/sibling AST scope context during retrieval (to give the LLM surrounding function context), which slightly lowers strict Mean Average Precision while keeping Recall high ($96.0\%$).
+3. **Cloud Container LLM Dependencies**: The backend requires an external cloud LLM API key (`GROQ_API_KEY` or `GEMINI_API_KEY`) when deployed to cloud environments like Render, as local Ollama instances are not available inside serverless/containerized free tiers.
+4. **Sandbox Isolation Level**: The current test execution sandbox uses temporary directory isolation and subprocess execution with process timeouts. For untrusted third-party code in multi-tenant environments, containerized execution (e.g., Docker or gVisor sandbox) should be enabled.
+
+---
+
+## Production Deployment (Render)
+
+The project includes a multi-service blueprint configuration in [`render.yaml`](render.yaml):
+
+1. **Backend Web Service (`ai-software-engineer-backend`)**: Python 3.10 service running `uvicorn src.api.server:app --host 0.0.0.0 --port $PORT`.
+2. **Frontend Static Site (`ai-software-engineer-frontend`)**: Static React build (`npm run build`) served over global CDN.
+3. Configure `GROQ_API_KEY` and `SUPABASE_DB_URL` under Environment Variables in the Render dashboard.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

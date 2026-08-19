@@ -353,6 +353,7 @@ export const App: React.FC = () => {
               isChatOpen={isChatOpen}
               onToggleChat={() => setIsChatOpen(!isChatOpen)}
               activeModel={activeModel}
+              onModelChange={setActiveModel}
             />
           )}
         </main>

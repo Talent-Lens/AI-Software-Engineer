@@ -41,6 +41,7 @@ interface CodeChatPanelProps {
   onClose: () => void;
   onJumpToLine: (lineNumber: number) => void;
   activeModel?: string;
+  onModelChange?: (model: string) => void;
   layoutMode?: 'right-dock' | 'bottom-drawer';
 }
 
@@ -57,6 +58,7 @@ export const CodeChatPanel: React.FC<CodeChatPanelProps> = ({
   onClose,
   onJumpToLine,
   activeModel = 'qwen-2.5-coder-32b',
+  onModelChange,
   layoutMode = 'right-dock',
 }) => {
   // Store chat history per file ID so switching files preserves conversation
@@ -365,9 +367,16 @@ export const CodeChatPanel: React.FC<CodeChatPanelProps> = ({
           <div className="min-w-0">
             <div className="flex items-center space-x-1.5">
               <h3 className="font-bold text-white text-xs truncate">Code Q&A</h3>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono font-medium truncate">
-                Qwen-2.5 Coder 32B
-              </span>
+              <select
+                value={activeModel}
+                onChange={(e) => onModelChange && onModelChange(e.target.value)}
+                className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-950/70 text-indigo-300 border border-indigo-500/30 font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                title="Select reasoning model for Code Q&A"
+              >
+                <option value="qwen-2.5-coder-32b" className="bg-[#151722] text-white">Qwen-2.5 Coder (32B)</option>
+                <option value="deepseek-r1-7b" className="bg-[#151722] text-white">DeepSeek-R1 (7B)</option>
+                <option value="gemini-2.5-flash" className="bg-[#151722] text-white">Gemini 2.5 Flash</option>
+              </select>
             </div>
             <p className="text-[10px] text-[#94a3b8] truncate">
               {currentFile ? currentFile.name : 'Context-aware LLM'}

@@ -63,6 +63,7 @@ interface UnifiedWorkspaceProps {
   isChatOpen?: boolean;
   onToggleChat?: () => void;
   activeModel?: string;
+  onModelChange?: (model: string) => void;
 }
 
 const VERIFICATION_STEPS = [
@@ -122,6 +123,7 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
   isChatOpen: externalChatOpen,
   onToggleChat: externalToggleChat,
   activeModel,
+  onModelChange,
 }) => {
   // Current Workflow Stage: 'input' | 'scanning' | 'results'
   const [stage, setStage] = useState<'input' | 'scanning' | 'results'>(files && files.length > 0 ? 'results' : 'input');
@@ -1441,6 +1443,7 @@ export const UnifiedWorkspace: React.FC<UnifiedWorkspaceProps> = ({
                 onClose={handleToggleChat}
                 onJumpToLine={handleJumpToLine}
                 activeModel={activeModel}
+                onModelChange={onModelChange}
               />
             )}
 

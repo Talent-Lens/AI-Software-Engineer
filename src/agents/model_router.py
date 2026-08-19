@@ -181,9 +181,20 @@ class ModelProviderChain:
         if preferred_model:
             pref = preferred_model.lower()
             if "gemini" in pref and gemini_key:
-                chain.append(("gemini", preferred_model))
-            elif ("qwen" in pref or "llama" in pref or "groq" in pref) and groq_key:
-                chain.append(("groq", preferred_model))
+                chain.append(("gemini", "gemini-3.6-flash"))
+                chain.append(("gemini", "gemini-flash-latest"))
+            elif "deepseek" in pref or "reason" in pref or "r1" in pref:
+                if groq_key:
+                    chain.append(("groq", "openai/gpt-oss-120b"))
+                    chain.append(("groq", "qwen/qwen3.6-27b"))
+                elif gemini_key:
+                    chain.append(("gemini", "gemini-pro-latest"))
+            elif "qwen" in pref or "coder" in pref:
+                if groq_key:
+                    chain.append(("groq", "openai/gpt-oss-20b"))
+                    chain.append(("groq", "qwen/qwen3.6-27b"))
+                elif gemini_key:
+                    chain.append(("gemini", "gemini-3.6-flash"))
 
         # 2. Add available cloud providers
         if groq_key:

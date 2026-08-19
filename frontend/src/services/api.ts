@@ -1,9 +1,25 @@
 import { EvalReport, BenchmarkTestCase, UserFeedbackRequest } from '../types';
 
-const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
-const API_BASE_URL = rawBaseUrl
-  ? (rawBaseUrl.startsWith('http://') || rawBaseUrl.startsWith('https://') ? rawBaseUrl : `https://${rawBaseUrl}`)
-  : '';
+function formatApiBaseUrl(raw: string | undefined): string {
+  if (!raw) return '';
+  let url = raw.trim();
+  if (!url) return '';
+
+  const clean = url.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  
+  // If it's a Render internal service name without a TLD (e.g. ai-software-engineer-backend-tjbe)
+  if (!clean.includes('.') && !clean.includes('localhost') && !clean.includes('127.0.0.1')) {
+    return `https://${clean}.onrender.com`;
+  }
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url.replace(/\/+$/, '');
+  }
+
+  return `https://${clean}`;
+}
+
+const API_BASE_URL = formatApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
 export async function fetchHealthStatus(): Promise<{ status: string; version: string; ok: boolean }> {
   try {
@@ -183,8 +199,11 @@ export async function runEvaluation(): Promise<EvalReport> {
     return normalizeEvalReport(rawData);
   } catch (err: any) {
     if (err?.name === 'TypeError' && (err.message === 'Failed to fetch' || err.message?.includes('fetch'))) {
+      console.error(`[CodeGuardian Network Error] Failed to reach backend API at: ${API_BASE_URL || window.location.origin}`, err);
+      const isDev = Boolean(import.meta.env.DEV);
+      const targetHint = isDev ? ` (${API_BASE_URL || 'relative path'})` : '';
       throw new Error(
-        `Failed to reach backend API at ${API_BASE_URL || window.location.origin}. If deployed on free hosting (Render/Hugging Face), the server is likely waking up from cold sleep (~50s). Please wait a moment and retry.`
+        `Unable to reach evaluation service${targetHint}. If the backend is waking up from sleep, please wait a moment and click Retry.`
       );
     }
     throw err;

@@ -181,20 +181,18 @@ class ModelProviderChain:
         if preferred_model:
             pref = preferred_model.lower()
             if "gemini" in pref and gemini_key:
-                chain.append(("gemini", "gemini-3.6-flash"))
-                chain.append(("gemini", "gemini-flash-latest"))
+                chain.append(("gemini", "gemini-3.7-flash"))
+                chain.append(("gemini", "gemini-3.5-flash"))
             elif "deepseek" in pref or "reason" in pref or "r1" in pref:
                 if groq_key:
                     chain.append(("groq", "openai/gpt-oss-120b"))
-                    chain.append(("groq", "qwen/qwen3.6-27b"))
                 elif gemini_key:
-                    chain.append(("gemini", "gemini-pro-latest"))
+                    chain.append(("gemini", "gemini-3.7-flash"))
+                chain.append(("ollama", "llama3.1:8b"))
             elif "qwen" in pref or "coder" in pref:
                 if groq_key:
-                    chain.append(("groq", "openai/gpt-oss-20b"))
                     chain.append(("groq", "qwen/qwen3.6-27b"))
-                elif gemini_key:
-                    chain.append(("gemini", "gemini-3.6-flash"))
+                chain.append(("ollama", "qwen2.5:3b"))
 
         # 2. Add available cloud providers
         if groq_key:
@@ -202,15 +200,12 @@ class ModelProviderChain:
                 chain.append(("groq", "openai/gpt-oss-120b"))
                 chain.append(("groq", "qwen/qwen3.6-27b"))
             else:
-                chain.append(("groq", "openai/gpt-oss-20b"))
-                chain.append(("groq", "openai/gpt-oss-120b"))
                 chain.append(("groq", "qwen/qwen3.6-27b"))
-            chain.append(("groq", "groq/compound"))
+                chain.append(("groq", "openai/gpt-oss-120b"))
 
         if gemini_key:
-            chain.append(("gemini", "gemini-3.6-flash"))
-            chain.append(("gemini", "gemini-flash-latest"))
-            chain.append(("gemini", "gemini-2.5-flash-lite"))
+            chain.append(("gemini", "gemini-3.7-flash"))
+            chain.append(("gemini", "gemini-3.5-flash"))
 
         # 3. Local offline Ollama fallbacks (fastest first)
         chain.append(("ollama", "llama3.2:1b"))
@@ -250,14 +245,15 @@ class ModelProviderChain:
         for prov, mod in decision.fallback_chain:
             attempts += 1
             res = None
+            actual_model = mod
 
             try:
                 if prov == "groq":
-                    res, err_detail = cls._call_groq(mod, prompt, system_prompt)
+                    res, actual_model, err_detail = cls._call_groq(mod, prompt, system_prompt)
                     if err_detail:
                         error_log.append(err_detail)
                 elif prov == "gemini":
-                    res, err_detail = cls._call_gemini(mod, prompt, system_prompt)
+                    res, actual_model, err_detail = cls._call_gemini(mod, prompt, system_prompt)
                     if err_detail:
                         error_log.append(err_detail)
                 elif prov == "ollama":
@@ -266,7 +262,7 @@ class ModelProviderChain:
                 error_log.append(f"{prov}/{mod}: {err}")
 
             if res and res.strip():
-                return res.strip(), prov, mod, (attempts - 1)
+                return res.strip(), prov, actual_model, (attempts - 1)
 
         # Build detailed diagnostic fallback message
         diag_str = "\n".join(f"- {e}" for e in error_log[-4:]) if error_log else "No provider errors recorded."
@@ -282,10 +278,10 @@ class ModelProviderChain:
         return fallback_msg, "system-fallback", "codeguardian-rule-engine", attempts
 
     @classmethod
-    def _call_groq(cls, model: str, prompt: str, system_prompt: str) -> tuple[str | None, str | None]:
+    def _call_groq(cls, model: str, prompt: str, system_prompt: str) -> tuple[str | None, str, str | None]:
         groq_key = (os.getenv("GROQ_API_KEY") or "").strip().strip("'\"")
         if not groq_key:
-            return None, "Groq: GROQ_API_KEY is empty or missing"
+            return None, model, "Groq: GROQ_API_KEY is empty or missing"
 
         headers = {
             "Authorization": f"Bearer {groq_key}",
@@ -297,7 +293,7 @@ class ModelProviderChain:
         messages.append({"role": "user", "content": prompt})
 
         candidate_models = [model]
-        for fallback_m in ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b", "groq/compound", "groq/compound-mini"]:
+        for fallback_m in ["qwen/qwen3.6-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]:
             if fallback_m not in candidate_models:
                 candidate_models.append(fallback_m)
 
@@ -310,23 +306,25 @@ class ModelProviderChain:
                     data = resp.json()
                     content = data.get("choices", [{}])[0].get("message", {}).get("content")
                     if content:
-                        return content, None
+                        cleaned = content.split("</think>")[-1].strip() if "</think>" in content else content.strip()
+                        return (cleaned if cleaned else content.strip()), cand, None
                 last_err = f"Groq ({cand}) HTTP {resp.status_code}: {resp.text[:120]}"
                 logger.warning(last_err)
             except Exception as err:
                 last_err = f"Groq ({cand}) network error: {err}"
                 logger.warning(last_err)
-        return None, last_err
+        return None, model, last_err
 
     @classmethod
-    def _call_gemini(cls, model: str, prompt: str, system_prompt: str) -> tuple[str | None, str | None]:
+    def _call_gemini(cls, model: str, prompt: str, system_prompt: str) -> tuple[str | None, str, str | None]:
         gemini_key = (os.getenv("GEMINI_API_KEY") or "").strip().strip("'\"")
         if not gemini_key:
-            return None, "Gemini: GEMINI_API_KEY is empty or missing"
+            return None, model, "Gemini: GEMINI_API_KEY is empty or missing"
 
-        candidate_models = ["gemini-3.6-flash", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-pro-latest"]
-        if model not in candidate_models:
-            candidate_models.insert(0, model)
+        norm_model = model.replace("models/", "")
+        candidate_models = ["gemini-3.7-flash", "gemini-3.5-flash", "gemini-flash-latest", "gemini-2.5-pro"]
+        if norm_model not in candidate_models:
+            candidate_models.insert(0, norm_model)
 
         combined_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
         payload = {"contents": [{"parts": [{"text": combined_prompt}]}]}
@@ -342,13 +340,13 @@ class ModelProviderChain:
                     if candidates:
                         parts = candidates[0].get("content", {}).get("parts", [])
                         if parts and "text" in parts[0]:
-                            return parts[0]["text"], None
+                            return parts[0]["text"], cand, None
                 last_err = f"Gemini ({cand}) HTTP {resp.status_code}: {resp.text[:120]}"
                 logger.warning(last_err)
             except Exception as err:
                 last_err = f"Gemini ({cand}) network error: {err}"
                 logger.warning(last_err)
-        return None, last_err
+        return None, model, last_err
 
     @classmethod
     def _call_ollama(cls, model: str, prompt: str, system_prompt: str) -> str | None:

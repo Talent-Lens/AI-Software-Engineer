@@ -13,6 +13,7 @@ class HealthResponse(BaseModel):
     database: str = "connected"
     vector_store: str = "ready"
     timestamp: str
+    llm_providers: Optional[dict[str, bool]] = None
 
 
 class AnalyzeRequest(BaseModel):

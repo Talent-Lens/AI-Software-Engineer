@@ -172,60 +172,37 @@ class ModelProviderChain:
     def get_routing_decision(
         cls, complexity: ComplexityScore, preferred_model: str = ""
     ) -> RoutingDecision:
-        groq_key = os.getenv("GROQ_API_KEY")
-        gemini_key = os.getenv("GEMINI_API_KEY")
+        groq_key = (os.getenv("GROQ_API_KEY") or "").strip().strip("'\"")
+        gemini_key = (os.getenv("GEMINI_API_KEY") or "").strip().strip("'\"")
 
         chain: list[tuple[str, str]] = []
 
-        # If user explicitly preferred a model, prioritize it if provider is available
+        # 1. Prioritize user's preferred model if specified
         if preferred_model:
             pref = preferred_model.lower()
             if "gemini" in pref and gemini_key:
                 chain.append(("gemini", preferred_model))
-            elif ("qwen-2.5-coder" in pref or "llama-3.3" in pref or "llama3" in pref) and groq_key:
+            elif ("qwen" in pref or "llama" in pref) and groq_key:
                 chain.append(("groq", preferred_model))
-            elif "qwen" in pref or "llama" in pref or "deepseek" in pref:
-                # Add normalized local ollama names if requested
-                if pref.startswith("qwen") and ":" not in pref:
-                    chain.append(("ollama", "qwen2.5:3b"))
-                else:
-                    chain.append(("ollama", preferred_model))
 
-        if complexity.tier == ComplexityTier.DEEP_REASONING:
-            primary_prov = "groq" if groq_key else ("gemini" if gemini_key else "ollama")
-            primary_mod = "llama-3.3-70b-versatile" if groq_key else ("gemini-2.5-flash" if gemini_key else "qwen2.5:3b")
-
-            if groq_key:
+        # 2. Add available cloud providers
+        if groq_key:
+            if complexity.tier == ComplexityTier.DEEP_REASONING:
                 chain.append(("groq", "llama-3.3-70b-versatile"))
-            if gemini_key:
-                chain.append(("gemini", "gemini-2.5-flash"))
-            chain.append(("ollama", "qwen2.5:3b"))
-            chain.append(("ollama", "llama3.2:1b"))
-            chain.append(("ollama", "llama3.1:8b"))
-
-        elif complexity.tier == ComplexityTier.BALANCED:
-            primary_prov = "groq" if groq_key else ("gemini" if gemini_key else "ollama")
-            primary_mod = "llama-3.3-70b-versatile" if groq_key else ("gemini-2.5-flash" if gemini_key else "qwen2.5:3b")
-
-            if groq_key:
-                chain.append(("groq", "llama-3.3-70b-versatile"))
-            if gemini_key:
-                chain.append(("gemini", "gemini-2.5-flash"))
-            chain.append(("ollama", "qwen2.5:3b"))
-            chain.append(("ollama", "llama3.2:1b"))
-            chain.append(("ollama", "llama3.1:8b"))
-
-        else:  # ComplexityTier.FAST
-            primary_prov = "groq" if groq_key else ("gemini" if gemini_key else "ollama")
-            primary_mod = "qwen-2.5-coder-32b" if groq_key else ("gemini-2.5-flash" if gemini_key else "qwen2.5:3b")
-
-            if groq_key:
                 chain.append(("groq", "qwen-2.5-coder-32b"))
-            if gemini_key:
-                chain.append(("gemini", "gemini-2.5-flash"))
-            chain.append(("ollama", "qwen2.5:3b"))
-            chain.append(("ollama", "llama3.2:1b"))
-            chain.append(("ollama", "llama3.1:8b"))
+            else:
+                chain.append(("groq", "qwen-2.5-coder-32b"))
+                chain.append(("groq", "llama-3.3-70b-versatile"))
+            chain.append(("groq", "llama-3.1-8b-instant"))
+
+        if gemini_key:
+            chain.append(("gemini", "gemini-2.5-flash"))
+            chain.append(("gemini", "gemini-1.5-flash"))
+
+        # 3. Local offline Ollama fallbacks
+        chain.append(("ollama", "qwen2.5:3b"))
+        chain.append(("ollama", "llama3.2:1b"))
+        chain.append(("ollama", "llama3.1:8b"))
 
         # Deduplicate while preserving order
         dedup_chain: list[tuple[str, str]] = []
@@ -235,14 +212,14 @@ class ModelProviderChain:
                 seen.add(item)
                 dedup_chain.append(item)
 
-        final_primary_prov = dedup_chain[0][0] if dedup_chain else primary_prov
-        final_primary_mod = dedup_chain[0][1] if dedup_chain else primary_mod
+        primary_prov = dedup_chain[0][0] if dedup_chain else "ollama"
+        primary_mod = dedup_chain[0][1] if dedup_chain else "qwen2.5:3b"
 
         return RoutingDecision(
             query="",
             complexity=complexity,
-            primary_provider=final_primary_prov,
-            primary_model=final_primary_mod,
+            primary_provider=primary_prov,
+            primary_model=primary_mod,
             fallback_chain=dedup_chain,
         )
 

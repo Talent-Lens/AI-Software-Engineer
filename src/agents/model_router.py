@@ -182,26 +182,28 @@ class ModelProviderChain:
             pref = preferred_model.lower()
             if "gemini" in pref and gemini_key:
                 chain.append(("gemini", preferred_model))
-            elif ("qwen" in pref or "llama" in pref) and groq_key:
+            elif ("qwen" in pref or "llama" in pref or "groq" in pref) and groq_key:
                 chain.append(("groq", preferred_model))
 
         # 2. Add available cloud providers
         if groq_key:
             if complexity.tier == ComplexityTier.DEEP_REASONING:
-                chain.append(("groq", "llama-3.3-70b-versatile"))
-                chain.append(("groq", "qwen-2.5-coder-32b"))
+                chain.append(("groq", "openai/gpt-oss-120b"))
+                chain.append(("groq", "qwen/qwen3.6-27b"))
             else:
-                chain.append(("groq", "qwen-2.5-coder-32b"))
-                chain.append(("groq", "llama-3.3-70b-versatile"))
-            chain.append(("groq", "llama-3.1-8b-instant"))
+                chain.append(("groq", "openai/gpt-oss-20b"))
+                chain.append(("groq", "openai/gpt-oss-120b"))
+                chain.append(("groq", "qwen/qwen3.6-27b"))
+            chain.append(("groq", "groq/compound"))
 
         if gemini_key:
-            chain.append(("gemini", "gemini-2.5-flash"))
-            chain.append(("gemini", "gemini-1.5-flash"))
+            chain.append(("gemini", "gemini-3.6-flash"))
+            chain.append(("gemini", "gemini-flash-latest"))
+            chain.append(("gemini", "gemini-2.5-flash-lite"))
 
-        # 3. Local offline Ollama fallbacks
-        chain.append(("ollama", "qwen2.5:3b"))
+        # 3. Local offline Ollama fallbacks (fastest first)
         chain.append(("ollama", "llama3.2:1b"))
+        chain.append(("ollama", "qwen2.5:3b"))
         chain.append(("ollama", "llama3.1:8b"))
 
         # Deduplicate while preserving order
@@ -213,7 +215,7 @@ class ModelProviderChain:
                 dedup_chain.append(item)
 
         primary_prov = dedup_chain[0][0] if dedup_chain else "ollama"
-        primary_mod = dedup_chain[0][1] if dedup_chain else "qwen2.5:3b"
+        primary_mod = dedup_chain[0][1] if dedup_chain else "llama3.2:1b"
 
         return RoutingDecision(
             query="",
@@ -232,7 +234,7 @@ class ModelProviderChain:
         Returns: (answer_text, provider_used, model_used, fallback_attempts)
         """
         attempts = 0
-        last_err = None
+        error_log: list[str] = []
 
         for prov, mod in decision.fallback_chain:
             attempts += 1
@@ -240,32 +242,39 @@ class ModelProviderChain:
 
             try:
                 if prov == "groq":
-                    res = cls._call_groq(mod, prompt, system_prompt)
+                    res, err_detail = cls._call_groq(mod, prompt, system_prompt)
+                    if err_detail:
+                        error_log.append(err_detail)
                 elif prov == "gemini":
-                    res = cls._call_gemini(mod, prompt, system_prompt)
+                    res, err_detail = cls._call_gemini(mod, prompt, system_prompt)
+                    if err_detail:
+                        error_log.append(err_detail)
                 elif prov == "ollama":
                     res = cls._call_ollama(mod, prompt, system_prompt)
             except Exception as err:
-                last_err = err
+                error_log.append(f"{prov}/{mod}: {err}")
 
             if res and res.strip():
                 return res.strip(), prov, mod, (attempts - 1)
 
-        # Graceful fallback when cloud keys are not configured and local Ollama is offline
+        # Build detailed diagnostic fallback message
+        diag_str = "\n".join(f"- {e}" for e in error_log[-4:]) if error_log else "No provider errors recorded."
         fallback_msg = (
             "🤖 **CodeGuardian Assistant Status**\n\n"
-            "Unable to reach an active LLM provider. To enable live generative AI responses in production:\n"
-            "1. Add a free **`GROQ_API_KEY`** (recommended for ultra-fast LLaMA/Qwen inference) or **`GEMINI_API_KEY`** in your cloud hosting environment variables (e.g., Render Dashboard → Environment).\n"
-            "2. Or ensure local Ollama is running (`ollama serve`) if hosting locally.\n\n"
-            "AST Static Code Analysis, OWASP Security Audits, and RAG Benchmark Suites remain active and functional."
+            "Unable to get a response from configured LLM providers.\n\n"
+            f"**Provider Diagnostics:**\n{diag_str}\n\n"
+            "**Troubleshooting:**\n"
+            "1. Verify `GROQ_API_KEY` or `GEMINI_API_KEY` in Render Dashboard → Environment.\n"
+            "2. Ensure API key is valid and not rate-limited.\n"
+            "3. If using local Ollama, ensure `ollama serve` is active."
         )
         return fallback_msg, "system-fallback", "codeguardian-rule-engine", attempts
 
     @classmethod
-    def _call_groq(cls, model: str, prompt: str, system_prompt: str) -> str | None:
+    def _call_groq(cls, model: str, prompt: str, system_prompt: str) -> tuple[str | None, str | None]:
         groq_key = (os.getenv("GROQ_API_KEY") or "").strip().strip("'\"")
         if not groq_key:
-            return None
+            return None, "Groq: GROQ_API_KEY is empty or missing"
 
         headers = {
             "Authorization": f"Bearer {groq_key}",
@@ -276,53 +285,59 @@ class ModelProviderChain:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        # Try target model, fallback to llama-3.3-70b-versatile or llama-3.1-8b-instant
         candidate_models = [model]
-        if model != "llama-3.3-70b-versatile":
-            candidate_models.append("llama-3.3-70b-versatile")
-        if "llama-3.1-8b-instant" not in candidate_models:
-            candidate_models.append("llama-3.1-8b-instant")
+        for fallback_m in ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b", "groq/compound", "groq/compound-mini"]:
+            if fallback_m not in candidate_models:
+                candidate_models.append(fallback_m)
 
+        last_err = None
         for cand in candidate_models:
             payload = {"model": cand, "messages": messages, "temperature": 0.2}
             try:
-                resp = requests.post(cls.GROQ_API_URL, headers=headers, json=payload, timeout=30)
+                resp = requests.post(cls.GROQ_API_URL, headers=headers, json=payload, timeout=25)
                 if resp.status_code == 200:
                     data = resp.json()
-                    return data["choices"][0]["message"]["content"]
-                else:
-                    logger.warning("Groq API (%s) returned HTTP %s: %s", cand, resp.status_code, resp.text[:200])
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content")
+                    if content:
+                        return content, None
+                last_err = f"Groq ({cand}) HTTP {resp.status_code}: {resp.text[:120]}"
+                logger.warning(last_err)
             except Exception as err:
-                logger.warning("Groq API (%s) call failed: %s", cand, err)
-        return None
+                last_err = f"Groq ({cand}) network error: {err}"
+                logger.warning(last_err)
+        return None, last_err
 
     @classmethod
-    def _call_gemini(cls, model: str, prompt: str, system_prompt: str) -> str | None:
+    def _call_gemini(cls, model: str, prompt: str, system_prompt: str) -> tuple[str | None, str | None]:
         gemini_key = (os.getenv("GEMINI_API_KEY") or "").strip().strip("'\"")
         if not gemini_key:
-            return None
+            return None, "Gemini: GEMINI_API_KEY is empty or missing"
 
-        candidate_models = [model]
-        if "gemini-1.5-flash" not in candidate_models:
-            candidate_models.append("gemini-1.5-flash")
-        if "gemini-2.0-flash" not in candidate_models:
-            candidate_models.append("gemini-2.0-flash")
+        candidate_models = ["gemini-3.6-flash", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-pro-latest"]
+        if model not in candidate_models:
+            candidate_models.insert(0, model)
 
         combined_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
         payload = {"contents": [{"parts": [{"text": combined_prompt}]}]}
 
+        last_err = None
         for cand in candidate_models:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{cand}:generateContent?key={gemini_key}"
             try:
-                resp = requests.post(url, json=payload, timeout=30)
+                resp = requests.post(url, json=payload, timeout=25)
                 if resp.status_code == 200:
                     data = resp.json()
-                    return data["candidates"][0]["content"]["parts"][0]["text"]
-                else:
-                    logger.warning("Gemini API (%s) returned HTTP %s: %s", cand, resp.status_code, resp.text[:200])
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and "text" in parts[0]:
+                            return parts[0]["text"], None
+                last_err = f"Gemini ({cand}) HTTP {resp.status_code}: {resp.text[:120]}"
+                logger.warning(last_err)
             except Exception as err:
-                logger.warning("Gemini API (%s) call failed: %s", cand, err)
-        return None
+                last_err = f"Gemini ({cand}) network error: {err}"
+                logger.warning(last_err)
+        return None, last_err
 
     @classmethod
     def _call_ollama(cls, model: str, prompt: str, system_prompt: str) -> str | None:

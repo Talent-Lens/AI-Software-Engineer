@@ -127,6 +127,76 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
+## 🔌 Model Context Protocol (MCP) Server
+
+CodeGuardian includes a production **Model Context Protocol (MCP)** server (`mcp>=1.0.0`) that exposes its multi-language AST chunker, persistent ChromaDB vector store, BM25 hybrid search, and neural Cross-Encoder re-ranking directly to AI developer tools such as **Claude Desktop**, **Claude Code**, **Cursor**, and **Windsurf**.
+
+### 🛠️ Exposed MCP Tools
+
+| Tool Name | Parameters | Description |
+| :--- | :--- | :--- |
+| `index_repository` | `path: str`, `reset: bool = False`, `incremental: bool = True`, `collection_name: str = "repo_index"`, `persist_path: str = "./chroma_db"` | Indexes a codebase into ChromaDB + BM25 with multi-language AST parsing (Python, TS, JS, Java, Go) and fast Git-diff incremental updates. |
+| `search_codebase` | `query: str`, `top_k: int = 5`, `rerank: bool = True`, `collection_name: str = "repo_index"`, `persist_path: str = "./chroma_db"`, `use_graph: bool = False` | Executes hybrid search (Dense Vector + BM25 + RRF + Cross-Encoder re-ranking) and returns code chunks with full file and line metadata. |
+| `get_function_context` | `path: str`, `function_name: str`, `collection_name: str = "repo_index"`, `persist_path: str = "./chroma_db"` | Retrieves complete AST context for a function/class including imports, parent class/struct hierarchy, start/end lines, and compilable context. |
+
+### 🚀 Running the MCP Server
+
+```bash
+# Direct module execution (stdio transport for MCP clients)
+python -m src.mcp.server --transport stdio
+
+# Or using the script runner
+python scripts/run_mcp_server.py --transport stdio
+```
+
+### ⚙️ Client Configurations
+
+#### 1. Claude Desktop (`claude_desktop_config.json`)
+Location:
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "codeguardian": {
+      "command": "python",
+      "args": [
+        "-m",
+        "src.mcp.server",
+        "--transport",
+        "stdio"
+      ],
+      "cwd": "C:\\path\\to\\CodeGuardian"
+    }
+  }
+}
+```
+
+#### 2. Claude Code CLI (`~/.claude.json` or project settings)
+```json
+{
+  "mcpServers": {
+    "codeguardian": {
+      "command": "python",
+      "args": [
+        "-m",
+        "src.mcp.server"
+      ],
+      "cwd": "C:\\path\\to\\CodeGuardian"
+    }
+  }
+}
+```
+
+#### 3. Cursor / Windsurf IDE
+Add a new MCP server in IDE Settings:
+- **Type:** `command` (stdio)
+- **Command:** `python -m src.mcp.server --transport stdio`
+- **Working Directory:** `/path/to/CodeGuardian`
+
+---
+
 ## Usage Examples
 
 ### 1. Programmatic Pipeline Execution (Python)

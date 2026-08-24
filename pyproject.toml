@@ -5,7 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ai-software-engineer"
 version = "0.1.0"
-dependencies = []
+dependencies = [
+    "mcp>=1.0.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

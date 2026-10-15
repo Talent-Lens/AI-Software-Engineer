@@ -77,3 +77,6 @@ eval_report.json
 eval_report.csv
 synthetic_benchmark_dataset.json
 hard_negatives_store.json
+
+#for showing the inner working:
+scripts/demo_core_ml.py

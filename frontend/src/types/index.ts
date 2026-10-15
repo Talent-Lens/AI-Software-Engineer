@@ -123,3 +123,29 @@ export interface LaunchChecklistReport {
   categorySummary?: Record<string, { total: number; passed: number; failed: number; manual: number; na: number }>;
   category_summary?: Record<string, { total: number; passed: number; failed: number; manual: number; na: number }>;
 }
+
+export interface RepoBenchmarkDetail {
+  file: string;
+  line: string;
+  issue?: string;
+  severity?: string;
+  [key: string]: any;
+}
+
+export interface RepoBenchmarkMetrics {
+  total_cases: number;
+  detected_cases: number;
+  false_positives: number;
+  precision: number;
+  recall: number;
+  f1_score: number;
+  details: RepoBenchmarkDetail[];
+}
+
+export interface RepoBenchmarkResponse {
+  status: string;
+  repo_url: string;
+  test_type: string;
+  metrics: RepoBenchmarkMetrics;
+  timestamp: string;
+}

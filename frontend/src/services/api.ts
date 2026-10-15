@@ -1,4 +1,4 @@
-import { EvalReport, BenchmarkTestCase, UserFeedbackRequest } from '../types';
+import { EvalReport, BenchmarkTestCase, UserFeedbackRequest, RepoBenchmarkResponse } from '../types';
 
 const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
 const API_BASE_URL = rawBaseUrl
@@ -289,6 +289,33 @@ export async function fetchLaunchChecklist(repoPath?: string, files?: Record<str
 
   if (!res.ok) {
     let errorDetail = `Launch Checklist audit failed with HTTP ${res.status}`;
+    try {
+      const errorJson = await res.json();
+      if (errorJson.detail) {
+        errorDetail = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
+      }
+    } catch (_) {}
+    throw new Error(errorDetail);
+  }
+
+  return await res.json();
+}
+
+export async function runRepoBenchmark(
+  repoUrl: string,
+  testType: 'security' | 'bugfix' | 'rag' = 'security'
+): Promise<RepoBenchmarkResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmark`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      repo_url: repoUrl,
+      test_type: testType,
+    }),
+  });
+
+  if (!res.ok) {
+    let errorDetail = `Benchmark evaluation failed with HTTP ${res.status}`;
     try {
       const errorJson = await res.json();
       if (errorJson.detail) {

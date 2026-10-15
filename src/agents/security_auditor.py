@@ -211,8 +211,8 @@ class SecurityASTScanner(ast.NodeVisitor):
         try:
             tree = ast.parse(self.code_text, filename=self.filename)
             self.visit(tree)
-        except SyntaxError:
-            # If code is a partial fragment or has syntax issues, fallback cleanly
+        except (SyntaxError, ValueError, RecursionError, Exception):
+            # If code is a partial fragment, has syntax issues, or malformed encoding, fallback cleanly
             pass
 
         return self.findings
@@ -302,17 +302,30 @@ class SecurityASTScanner(ast.NodeVisitor):
             )
 
         if module_name == "subprocess" and func_name in ("call", "Popen", "run", "check_output"):
-            for keyword in node.keywords:
-                if keyword.arg == "shell" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True:
-                    self._add_vulnerability(
-                        owasp_code="A03",
-                        title="Subprocess Executed with shell=True",
-                        severity="High",
-                        line_no=node.lineno,
-                        snippet=self._get_line_snippet(node.lineno),
-                        description="Executing subprocess with shell=True enables shell injection attacks if arguments are formatted strings.",
-                        remediation="Pass command arguments as a list of strings and set shell=False.",
-                    )
+            has_shell = any(
+                keyword.arg == "shell" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True
+                for keyword in node.keywords
+            )
+            if has_shell:
+                self._add_vulnerability(
+                    owasp_code="A03",
+                    title="Subprocess Executed with shell=True",
+                    severity="High",
+                    line_no=node.lineno,
+                    snippet=self._get_line_snippet(node.lineno),
+                    description="Executing subprocess with shell=True enables shell injection attacks if arguments are formatted strings.",
+                    remediation="Pass command arguments as a list of strings and set shell=False.",
+                )
+            else:
+                self._add_vulnerability(
+                    owasp_code="A03",
+                    title="Subprocess Call - Execution Audit",
+                    severity="Low",
+                    line_no=node.lineno,
+                    snippet=self._get_line_snippet(node.lineno),
+                    description="Subprocess invocation audited for possible command execution risks.",
+                    remediation="Ensure command arguments are sanitized and avoid executing untrusted input.",
+                )
 
         # A03: SQL Injection detection (cursor.execute with f-string or % formatting)
         if func_name in ("execute", "executemany", "read_sql"):
@@ -390,20 +403,41 @@ class SecurityASTScanner(ast.NodeVisitor):
                 remediation=f"Use hashlib.sha256() or password hashing libraries like bcrypt or argon2.",
             )
 
-        # A04: Insecure PRNG for Security Contexts (random.random, random.randint)
+        # A04: Insecure PRNG (random.random, random.randint, random.choice)
         if module_name == "random" and func_name in ("random", "randint", "choice", "randrange"):
-            # Check if context looks like token generation
-            line_str = self._get_line_snippet(node.lineno).lower()
-            if any(term in line_str for term in ("token", "key", "secret", "password", "auth", "session")):
-                self._add_vulnerability(
-                    owasp_code="A04",
-                    title="Insecure Pseudo-Random Number Generator for Security Token",
-                    severity="Medium",
-                    line_no=node.lineno,
-                    snippet=self._get_line_snippet(node.lineno),
-                    description="Standard random module PRNG is predictable and unsuitable for security credentials.",
-                    remediation="Use the cryptographically secure secrets module (e.g. secrets.token_hex()).",
-                )
+            self._add_vulnerability(
+                owasp_code="A04",
+                title="Use of Insecure Pseudo-Random Number Generator",
+                severity="Low",
+                line_no=node.lineno,
+                snippet=self._get_line_snippet(node.lineno),
+                description="Standard random module PRNG is predictable and unsuitable for security/cryptographic purposes.",
+                remediation="Use the cryptographically secure secrets module (e.g. secrets.token_hex()).",
+            )
+
+        # A05: SSL/TLS Verification Disabled (_create_unverified_context or verify=False)
+        if func_name in ("_create_unverified_context", "_create_unverified_https_context"):
+            self._add_vulnerability(
+                owasp_code="A05",
+                title="Creation of Unverified SSL/TLS Context",
+                severity="Medium",
+                line_no=node.lineno,
+                snippet=self._get_line_snippet(node.lineno),
+                description="Creating an unverified SSL context bypasses certificate validation and exposes connections to MitM attacks.",
+                remediation="Use ssl.create_default_context() with valid certificate verification.",
+            )
+
+        # A10: Unvalidated URL open (urllib.request.urlopen or urllib.urlopen)
+        if func_name in ("urlopen", "urlretrieve") or (module_name in ("urllib", "request") and func_name == "urlopen"):
+            self._add_vulnerability(
+                owasp_code="A10",
+                title="Audit URL Open for Permitted Schemes",
+                severity="Medium",
+                line_no=node.lineno,
+                snippet=self._get_line_snippet(node.lineno),
+                description="urlopen allows unexpected schemes (e.g., file://) if not restricted to http/https.",
+                remediation="Validate URL scheme with urllib.parse.urlparse before opening.",
+            )
 
         # A05: SSL/TLS Verification Disabled (verify=False in HTTP requests)
         if func_name in ("get", "post", "put", "delete", "request") and (

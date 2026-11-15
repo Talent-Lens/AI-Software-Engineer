@@ -170,14 +170,14 @@ class CodeChatResponse(BaseModel):
 class BenchmarkRequest(BaseModel):
     """Request model for the benchmark endpoint.
 
-    repo_url: Public HTTPS URL of the GitHub repository to evaluate.
+    repo_url: Public HTTPS URL of the GitHub repository to evaluate, GitHub slug (owner/repo), or local directory path.
     test_type: Which independent judge to use. Options:
         - "security" – run Bandit on the repo.
         - "bugfix"   – run pytest on injected/fixed bugs.
         - "rag"      – future RAG evaluator.
     cve_ids: Optional list of CVE identifiers if you want to limit the test set.
     """
-    repo_url: HttpUrl
+    repo_url: str
     test_type: str = "security"
     cve_ids: Optional[List[str]] = None
 
@@ -197,7 +197,7 @@ class BenchmarkResponse(BaseModel):
     The `metrics` field contains the aggregated results from the selected judge.
     """
     status: str = "completed"
-    repo_url: HttpUrl
+    repo_url: str
     test_type: str
     metrics: BenchmarkResult
     timestamp: str

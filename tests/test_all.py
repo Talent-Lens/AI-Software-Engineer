@@ -3,6 +3,7 @@ Unit Test Suite for AI Software Engineer Platform
 Verifies schema, AST chunker, bug detection, review agent, test generation, RAG prompt building, and LangGraph pipeline.
 """
 
+import os
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -277,6 +278,65 @@ class TestTestGeneration(unittest.TestCase):
         self.assertEqual(res["confidence"], 1.0)
         self.assertIn("Verified pytest suite", res["summary"])
         mock_refine.assert_called_once()
+
+    def test_sandbox_no_host_env_leak(self):
+        source_code = "def get_val():\n    return 42\n"
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
+            f.write(source_code)
+            f.flush()
+
+            os.environ["CRITICAL_HOST_SECRET"] = "super-secret-production-token-999"
+            try:
+                test_code = (
+                    "import os\n"
+                    "def test_secret_not_leaked():\n"
+                    "    assert 'CRITICAL_HOST_SECRET' not in os.environ\n"
+                )
+                res = execute_tests_in_sandbox(f.name, test_code)
+            finally:
+                os.environ.pop("CRITICAL_HOST_SECRET", None)
+
+        self.assertEqual(res["status"], "PASSED")
+        self.assertEqual(res["exit_code"], 0)
+
+    def test_sandbox_network_isolated(self):
+        source_code = "def ping():\n    return True\n"
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
+            f.write(source_code)
+            f.flush()
+
+            test_code = (
+                "import urllib.request\n"
+                "import pytest\n"
+                "def test_outbound_network_blocked():\n"
+                "    with pytest.raises(Exception):\n"
+                "        urllib.request.urlopen('http://1.1.1.1', timeout=2)\n"
+            )
+            res = execute_tests_in_sandbox(f.name, test_code)
+
+        self.assertEqual(res["status"], "PASSED")
+        self.assertEqual(res["exit_code"], 0)
+
+    def test_sandbox_disabled_flag(self):
+        source_code = "def add(a, b):\n    return a + b\n"
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
+            f.write(source_code)
+            f.flush()
+
+            old_val = os.environ.get("ENABLE_SANDBOX")
+            os.environ["ENABLE_SANDBOX"] = "false"
+            try:
+                test_code = "def test_add():\n    assert add(1, 1) == 2\n"
+                res = execute_tests_in_sandbox(f.name, test_code)
+            finally:
+                if old_val is not None:
+                    os.environ["ENABLE_SANDBOX"] = old_val
+                else:
+                    os.environ.pop("ENABLE_SANDBOX", None)
+
+        self.assertEqual(res["status"], "ERROR")
+        self.assertEqual(res["exit_code"], -1)
+        self.assertIn("Sandbox execution is disabled", res["stderr"])
 
 
 class TestRAG(unittest.TestCase):

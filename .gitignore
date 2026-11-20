@@ -39,6 +39,7 @@ htmlcov/
 # Local learning & test repositories
 scratch/
 test_repo/
+data/benchmark_cache/
 
 # Vector database & database files
 chroma_db/

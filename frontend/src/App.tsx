@@ -10,8 +10,9 @@ import { SimpleUserWizard } from './components/SimpleUserWizard';
 import { DeveloperLanding } from './components/DeveloperLanding';
 import { UnifiedWorkspace } from './components/UnifiedWorkspace';
 import { QuickTourModal } from './components/QuickTourModal';
-import { ActiveTab, CodeFile, PipelineExecutionState, UIMode } from './types';
-import { fetchHealthStatus } from './services/api';
+import { AuthPage } from './components/AuthPage';
+import { ActiveTab, CodeFile, PipelineExecutionState, UIMode, AuthState, UserPublic } from './types';
+import { fetchHealthStatus, fetchCurrentUser, logoutUser } from './services/api';
 
 const defaultSampleFiles: CodeFile[] = [
   {
@@ -151,6 +152,11 @@ except Exception as e:
 ];
 
 export const App: React.FC = () => {
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+  });
   const [uiMode, setUiMode] = useState<UIMode>('advanced');
   const [currentView, setCurrentView] = useState<'workspace' | 'eval'>('workspace');
   const [files, setFiles] = useState<CodeFile[]>(defaultSampleFiles);
@@ -244,7 +250,30 @@ export const App: React.FC = () => {
     fetchHealthStatus().then((res) => {
       setIsBackendConnected(res.ok);
     });
+
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      fetchCurrentUser()
+        .then((user: UserPublic) => {
+          setAuthState({ user, isAuthenticated: true, isLoading: false });
+        })
+        .catch(() => {
+          logoutUser();
+          setAuthState({ user: null, isAuthenticated: false, isLoading: false });
+        });
+    } else {
+      setAuthState({ user: null, isAuthenticated: false, isLoading: false });
+    }
   }, []);
+
+  const handleAuthSuccess = (user: UserPublic) => {
+    setAuthState({ user, isAuthenticated: true, isLoading: false });
+  };
+
+  const handleLogout = () => {
+    logoutUser();
+    setAuthState({ user: null, isAuthenticated: false, isLoading: false });
+  };
 
   const handleRunPipeline = () => {
     setPipelineState(prev => ({
@@ -296,6 +325,7 @@ export const App: React.FC = () => {
   const handleUploadCustomFile = (newFile: CodeFile) => {
     setFiles([newFile]);
     setSelectedFile(newFile);
+    setCurrentView('workspace');
   };
 
   const handleUploadMultipleFiles = (newFiles: CodeFile[]) => {
@@ -318,6 +348,21 @@ export const App: React.FC = () => {
     handleRunPipeline();
   };
 
+  if (authState.isLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#0a0a0f] text-zinc-400 font-mono text-xs">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <span>Verifying platform credentials...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authState.isAuthenticated) {
+    return <AuthPage onAuthSuccess={handleAuthSuccess} />;
+  }
+
   return (
     <div className="flex flex-col h-screen w-screen bg-[#0d0d12] text-[#cccccc] overflow-hidden select-none">
       {/* Top Header */}
@@ -333,6 +378,8 @@ export const App: React.FC = () => {
         onOpenGuide={() => setIsGuideOpen(true)}
         isChatOpen={isChatOpen}
         onToggleChat={() => setIsChatOpen(!isChatOpen)}
+        currentUser={authState.user}
+        onLogout={handleLogout}
       />
 
       {/* Main Workbench Body Area */}
@@ -353,6 +400,7 @@ export const App: React.FC = () => {
               isChatOpen={isChatOpen}
               onToggleChat={() => setIsChatOpen(!isChatOpen)}
               activeModel={activeModel}
+              currentUser={authState.user}
             />
           )}
         </main>

@@ -5,8 +5,9 @@ import {
   BarChart3,
   CheckCircle2,
   Sparkles,
-  MessageSquareCode
+  LogOut
 } from 'lucide-react';
+import { UserPublic } from '../types';
 
 interface HeaderProps {
   activeModel: string;
@@ -20,6 +21,8 @@ interface HeaderProps {
   onOpenGuide?: () => void;
   isChatOpen?: boolean;
   onToggleChat?: () => void;
+  currentUser?: UserPublic | null;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -34,6 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenGuide,
   isChatOpen,
   onToggleChat,
+  currentUser,
+  onLogout,
 }) => {
 
   return (
@@ -101,23 +106,6 @@ export const Header: React.FC<HeaderProps> = ({
           </select>
         </div>
 
-        {/* Ask AI (Q&A) Toggle Button */}
-        {onToggleChat && (
-          <button
-            onClick={onToggleChat}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-sm ${
-              isChatOpen
-                ? 'bg-indigo-600 border-indigo-400 text-white shadow-indigo-950/50'
-                : 'bg-[#1c2030] hover:bg-[#252a40] border-[#2d334d] text-indigo-200 hover:text-white'
-            }`}
-            title="Ask Questions About the Code (Qwen-2.5 Coder 32B)"
-          >
-            <MessageSquareCode className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Ask AI</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          </button>
-        )}
-
         {/* How It Works / Onboarding Guide Button */}
         {onOpenGuide && (
           <button
@@ -129,6 +117,28 @@ export const Header: React.FC<HeaderProps> = ({
             <span>How It Works</span>
           </button>
         )}
+
+        {/* User Account / Sign Out Section */}
+        {currentUser && (
+          <div className="flex items-center space-x-2.5 pl-2.5 border-l border-[#262a3d]">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-xs font-bold text-indigo-400">
+              {(currentUser.display_name || currentUser.username).slice(0, 2).toUpperCase()}
+            </div>
+            <span className="text-xs text-zinc-300 font-medium hidden sm:inline">
+              {currentUser.display_name || currentUser.username}
+            </span>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="p-1.5 rounded-lg bg-[#1c2030] hover:bg-red-500/10 border border-[#2d334d] hover:border-red-500/30 text-zinc-400 hover:text-red-400 transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
 
 
       </div>

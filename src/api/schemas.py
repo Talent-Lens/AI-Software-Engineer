@@ -202,3 +202,46 @@ class BenchmarkResponse(BaseModel):
     metrics: BenchmarkResult
     timestamp: str
 
+
+# ==========================================
+# AUTHENTICATION SCHEMAS
+# ==========================================
+
+class UserPublic(BaseModel):
+    id: str
+    email: str
+    username: str
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    role: str = "user"
+    created_at: Optional[str] = None
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+    username: str = Field(..., min_length=3, max_length=30)
+    password: str = Field(..., min_length=8, max_length=128)
+    display_name: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    login: str = Field(..., description="Email or Username")
+    password: str = Field(..., min_length=1)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: UserPublic
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class AuthMessageResponse(BaseModel):
+    message: str
+    status: str = "ok"
+
+

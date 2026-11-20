@@ -149,3 +149,20 @@ export interface RepoBenchmarkResponse {
   metrics: RepoBenchmarkMetrics;
   timestamp: string;
 }
+
+export interface UserPublic {
+  id: string;
+  email: string;
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
+  role: string;
+  created_at?: string;
+}
+
+export interface AuthState {
+  user: UserPublic | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
+

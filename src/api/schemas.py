@@ -170,14 +170,14 @@ class CodeChatResponse(BaseModel):
 class BenchmarkRequest(BaseModel):
     """Request model for the benchmark endpoint.
 
-    repo_url: Public HTTPS URL of the GitHub repository to evaluate.
+    repo_url: Public HTTPS URL of the GitHub repository to evaluate, GitHub slug (owner/repo), or local directory path.
     test_type: Which independent judge to use. Options:
         - "security" – run Bandit on the repo.
         - "bugfix"   – run pytest on injected/fixed bugs.
         - "rag"      – future RAG evaluator.
     cve_ids: Optional list of CVE identifiers if you want to limit the test set.
     """
-    repo_url: HttpUrl
+    repo_url: str
     test_type: str = "security"
     cve_ids: Optional[List[str]] = None
 
@@ -197,8 +197,51 @@ class BenchmarkResponse(BaseModel):
     The `metrics` field contains the aggregated results from the selected judge.
     """
     status: str = "completed"
-    repo_url: HttpUrl
+    repo_url: str
     test_type: str
     metrics: BenchmarkResult
     timestamp: str
+
+
+# ==========================================
+# AUTHENTICATION SCHEMAS
+# ==========================================
+
+class UserPublic(BaseModel):
+    id: str
+    email: str
+    username: str
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    role: str = "user"
+    created_at: Optional[str] = None
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+    username: str = Field(..., min_length=3, max_length=30)
+    password: str = Field(..., min_length=8, max_length=128)
+    display_name: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    login: str = Field(..., description="Email or Username")
+    password: str = Field(..., min_length=1)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: UserPublic
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class AuthMessageResponse(BaseModel):
+    message: str
+    status: str = "ok"
+
 

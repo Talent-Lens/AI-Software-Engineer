@@ -210,3 +210,74 @@ class AuditLog(Base):
             "details": self.details or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class User(Base):
+    """
+    Enterprise user account model supporting authentication,
+    RBAC, and security audit logs.
+    """
+    __tablename__ = "users"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    email = Column(String(320), unique=True, nullable=False, index=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    display_name = Column(String(200), nullable=True)
+    hashed_password = Column(String(255), nullable=False)
+    avatar_url = Column(String(1024), nullable=True)
+    role = Column(String(20), default="user", nullable=False)  # "user" | "admin" | "viewer"
+    is_active = Column(Boolean, default=True, nullable=False)
+    is_verified = Column(Boolean, default=False, nullable=False)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, index=True)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert model to public dict without exposing password hash."""
+        return {
+            "id": self.id,
+            "email": self.email,
+            "username": self.username,
+            "display_name": self.display_name or self.username,
+            "avatar_url": self.avatar_url,
+            "role": self.role,
+            "is_active": self.is_active,
+            "is_verified": self.is_verified,
+            "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class GitHubInstallation(Base):
+    """
+    Linked GitHub App installation record for an authenticated user.
+    Enables server-side installation access tokens and repository access without PATs.
+    """
+    __tablename__ = "github_installations"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    installation_id = Column(Integer, nullable=False, index=True)
+    account_login = Column(String(255), nullable=True)
+    account_avatar_url = Column(String(1024), nullable=True)
+    account_type = Column(String(50), default="User")
+    repository_selection = Column(String(50), default="selected")
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", backref="github_installation")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "installation_id": self.installation_id,
+            "account_login": self.account_login,
+            "account_avatar_url": self.account_avatar_url,
+            "account_type": self.account_type,
+            "repository_selection": self.repository_selection,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+

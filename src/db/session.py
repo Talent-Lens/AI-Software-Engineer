@@ -39,24 +39,42 @@ def get_database_url() -> str:
 
 DATABASE_URL = get_database_url()
 
-# Engine configuration
-if DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(
-        DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        echo=False,
-    )
-else:
-    # Production PostgreSQL / Supabase pool configuration
-    engine = create_engine(
-        DATABASE_URL,
-        pool_size=10,
-        max_overflow=20,
-        pool_pre_ping=True,
-        pool_recycle=300,
-        echo=False,
-    )
+def create_active_engine(db_url: str):
+    """Create engine with SQLite fallback if remote DB is unreachable."""
+    if db_url.startswith("sqlite"):
+        return create_engine(
+            db_url,
+            connect_args={"check_same_thread": False},
+            echo=False,
+        )
+    try:
+        remote_engine = create_engine(
+            db_url,
+            pool_size=10,
+            max_overflow=20,
+            pool_pre_ping=True,
+            pool_recycle=300,
+            echo=False,
+        )
+        # Test connection immediately
+        with remote_engine.connect():
+            pass
+        return remote_engine
+    except Exception as err:
+        logger.warning(
+            "Remote database connection failed (%s). Falling back automatically to local SQLite.",
+            err,
+        )
+        data_dir = Path("data")
+        data_dir.mkdir(parents=True, exist_ok=True)
+        sqlite_path = data_dir / "ai_engineer.db"
+        return create_engine(
+            f"sqlite:///{sqlite_path.as_posix()}",
+            connect_args={"check_same_thread": False},
+            echo=False,
+        )
 
+engine = create_active_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

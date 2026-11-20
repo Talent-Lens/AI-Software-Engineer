@@ -328,3 +328,202 @@ export async function runRepoBenchmark(
   return await res.json();
 }
 
+// ==========================================
+// AUTHENTICATION API SERVICES
+// ==========================================
+
+export function getAuthToken(): string | null {
+  return localStorage.getItem('access_token');
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function registerUser(
+  email: string,
+  username: string,
+  password: string,
+  displayName?: string
+): Promise<{ access_token: string; refresh_token: string; user: any }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      username,
+      password,
+      display_name: displayName,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new Error(errorJson.detail || 'Registration failed');
+  }
+
+  const data = await res.json();
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  return data;
+}
+
+export async function loginUser(
+  login: string,
+  password: string
+): Promise<{ access_token: string; refresh_token: string; user: any }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, password }),
+  });
+
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new Error(errorJson.detail || 'Invalid login credentials');
+  }
+
+  const data = await res.json();
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  return data;
+}
+
+export async function fetchCurrentUser(): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error('Session invalid');
+  }
+
+  return await res.json();
+}
+
+export function logoutUser(): void {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+}
+
+// ==========================================
+// GITHUB APP API CLIENT
+// ==========================================
+
+export async function fetchGitHubConnectUrl(): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/app/connect`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new Error(errorJson.detail || 'Failed to initiate GitHub authorization');
+  }
+
+  const data = await res.json();
+  return data.install_url;
+}
+
+export async function fetchGitHubInstallationStatus(): Promise<{
+  connected: boolean;
+  installation?: any;
+  repos: any[];
+  app_configured: boolean;
+  error?: string;
+}> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/installation`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    return { connected: false, repos: [], app_configured: false };
+  }
+
+  return await res.json();
+}
+
+export async function fetchGitHubBranches(owner: string, repo: string): Promise<string[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/branches?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    return ['main'];
+  }
+
+  const data = await res.json();
+  return data.branches || ['main'];
+}
+
+export async function disconnectGitHubApp(): Promise<boolean> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/disconnect`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  return res.ok;
+}
+
+export interface CreatePRPayload {
+  repo_full_name: string;
+  file_path: string;
+  patch_content: string;
+  base_branch?: string;
+  commit_message?: string;
+  pr_title?: string;
+  pr_body?: string;
+}
+
+export interface CreatePRResponse {
+  status: string;
+  pr_url: string;
+  pr_number: number;
+  branch: string;
+  base_branch: string;
+  repo: string;
+}
+
+export async function createGitHubPullRequest(payload: CreatePRPayload): Promise<CreatePRResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/create-pr`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    let errorDetail = `Failed to create Pull Request (HTTP ${res.status})`;
+    try {
+      const errorJson = await res.json();
+      if (errorJson.detail) {
+        errorDetail = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
+      }
+    } catch (_) {
+      // fallback
+    }
+    throw new Error(errorDetail);
+  }
+
+  return await res.json();
+}
+
+
+

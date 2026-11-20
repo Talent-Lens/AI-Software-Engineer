@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routers import health, analyze, retrieval, eval as eval_router, agents, feedback, analytics, github, telemetry, chat, benchmark
+from src.api.routers import health, analyze, retrieval, eval as eval_router, agents, feedback, analytics, github, telemetry, chat, benchmark, auth
 from src.api.websockets import manager, stream_pipeline_execution
 from src.db.session import init_db
 from src.telemetry.middleware import TelemetryMiddleware
@@ -71,6 +71,11 @@ app.include_router(github.router, prefix="/api/v1")
 app.include_router(telemetry.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(benchmark.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")
+
+# Direct alias routes for GitHub callbacks to prevent 404 regardless of URL prefix configured in GitHub App
+app.add_api_route("/github/callback", github.github_app_callback, methods=["GET"], include_in_schema=False)
+app.add_api_route("/api/github/callback", github.github_app_callback, methods=["GET"], include_in_schema=False)
 
 
 

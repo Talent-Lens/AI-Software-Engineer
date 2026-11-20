@@ -225,6 +225,13 @@ export const EvalDashboard: React.FC = () => {
           >
             DSSS (SQLi)
           </button>
+          <button
+            onClick={() => handleRunBenchmark('psf/requests', 'bugfix')}
+            disabled={isBenchmarking}
+            className="px-3 py-1.5 bg-[#1a1d2d] hover:bg-[#23263c] border border-[#2d314d] text-emerald-300 rounded-xl text-xs font-medium transition cursor-pointer"
+          >
+            psf/requests (pytest)
+          </button>
         </div>
       </div>
 
@@ -233,10 +240,10 @@ export const EvalDashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-xs font-semibold text-white">
             <Globe className="w-4 h-4 text-indigo-400" />
-            <span>Evaluate Any Public GitHub Repository Against Independent Judge</span>
+            <span>Evaluate Any Public GitHub Repository or Local Path Against Independent Judge</span>
           </div>
           <span className="text-[11px] text-[#64748b]">
-            Clones into temporary sandbox &bull; Auto-cleans afterwards
+            Clones into temporary sandbox &bull; Offline-ready with cached standard corpora &bull; Auto-cleans afterwards
           </span>
         </div>
 
@@ -247,7 +254,7 @@ export const EvalDashboard: React.FC = () => {
               type="text"
               value={repoUrl}
               onChange={(e) => setRepoUrl(e.target.value)}
-              placeholder="Enter public GitHub repository URL (e.g. https://github.com/owner/repo)..."
+              placeholder="Enter public GitHub repository URL (e.g. https://github.com/owner/repo), slug, or local directory (e.g. test_repo)..."
               className="w-full bg-[#11131c] border border-[#232638] focus:border-indigo-500 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-[#64748b] focus:outline-none transition"
               disabled={isBenchmarking}
             />

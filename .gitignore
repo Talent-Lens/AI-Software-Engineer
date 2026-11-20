@@ -51,6 +51,8 @@ chroma_db/
 .env.*
 *.pem
 *.key
+codeguardian*.private-key.pem
+codeguardian-tomar.2026-11-19.private-key.pem
 
 # IDEs & Editors
 .vscode/

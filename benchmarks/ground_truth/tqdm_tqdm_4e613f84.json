@@ -1,0 +1,91 @@
+{
+  "repo_name": "tqdm/tqdm (4e613f84)",
+  "url": "https://github.com/tqdm/tqdm",
+  "pinned_vulnerable_sha": "cc372d09dcd5a5eabdc6ed4cf365bdb0be004d44",
+  "pinned_clean_sha": "4e613f84ed2ae029559f539464df83fa91feb316",
+  "language": "python",
+  "loc": 4643,
+  "description": "Auto-extracted benchmark for CVE-2024-34062",
+  "label_quality": "provisional",
+  "labeled_findings": [
+    {
+      "id": "GT-CVE-2024-34062-001",
+      "file": "tqdm/cli.py",
+      "line_start": 24,
+      "line_end": 24,
+      "cwe": "CWE-74",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 4e613f84. Changed 1 line(s) in tqdm/cli.py.",
+      "deleted_lines": [
+        "        raise TqdmTypeError(val + ' : ' + typ)"
+      ],
+      "added_lines": [
+        "        raise TqdmTypeError(f\"{val} : {typ}\")"
+      ]
+    },
+    {
+      "id": "GT-CVE-2024-34062-002",
+      "file": "tqdm/cli.py",
+      "line_start": 30,
+      "line_end": 30,
+      "cwe": "CWE-74",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 4e613f84. Changed 1 line(s) in tqdm/cli.py.",
+      "deleted_lines": [
+        "        elif val == 'False':"
+      ],
+      "added_lines": [
+        "        if val == 'False':"
+      ]
+    },
+    {
+      "id": "GT-CVE-2024-34062-003",
+      "file": "tqdm/cli.py",
+      "line_start": 32,
+      "line_end": 40,
+      "cwe": "CWE-74",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 4e613f84. Changed 9 line(s) in tqdm/cli.py.",
+      "deleted_lines": [
+        "        else:",
+        "            raise TqdmTypeError(val + ' : ' + typ)",
+        "    try:",
+        "        return eval(typ + '(\"' + val + '\")')",
+        "    except Exception:",
+        "        if typ == 'chr':",
+        "            return chr(ord(eval('\"' + val + '\"'))).encode()",
+        "        else:",
+        "            raise TqdmTypeError(val + ' : ' + typ)"
+      ],
+      "added_lines": [
+        "        raise TqdmTypeError(val + ' : ' + typ)",
+        "    if typ == 'chr':",
+        "        if len(val) == 1:",
+        "            return val.encode()",
+        "        if re.match(r\"^\\\\\\w+$\", val):",
+        "            return eval(f'\"{val}\"').encode()",
+        "        raise TqdmTypeError(f\"{val} : {typ}\")",
+        "    if typ == 'str':",
+        "        return val",
+        "    if typ == 'int':",
+        "        try:",
+        "            return int(val)",
+        "        except ValueError as exc:",
+        "            raise TqdmTypeError(f\"{val} : {typ}\") from exc",
+        "    if typ == 'float':",
+        "        try:",
+        "            return float(val)",
+        "        except ValueError as exc:",
+        "            raise TqdmTypeError(f\"{val} : {typ}\") from exc",
+        "    raise TqdmTypeError(f\"{val} : {typ}\")"
+      ]
+    }
+  ],
+  "clean_negative_regions": []
+}

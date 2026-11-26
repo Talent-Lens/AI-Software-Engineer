@@ -22,16 +22,64 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from src.api.schemas import (
     BenchmarkRequest,
     BenchmarkResponse,
     BenchmarkResult,
 )
+from src.db.session import get_benchmark_read_db, get_db
+from src.benchmarks.read_service import BenchmarkReadService, get_latest_latency_pass_from_db
 
 logger = logging.getLogger("ai_engineer.api.benchmark")
-router = APIRouter(tags=["Benchmark"])
+
+
+def get_benchmark_mode() -> str:
+    """Returns 'research' only when BENCHMARK_MODE=research; defaults to 'readonly'."""
+    raw = os.getenv("BENCHMARK_MODE", "readonly").strip().lower()
+    return "research" if raw == "research" else "readonly"
+
+
+read_router = APIRouter(tags=["Benchmark"])
+research_router = APIRouter(tags=["Benchmark Research"])
+
+
+@read_router.get("/benchmarks/capabilities")
+def get_benchmark_capabilities() -> Dict[str, Any]:
+    """Returns current benchmark mode and UI capabilities."""
+    mode = get_benchmark_mode()
+    is_research = mode == "research"
+    return {
+        "benchmark_mode": mode,
+        "readonly": not is_research,
+        "can_mutate": is_research,
+        "can_run": is_research,
+        "can_add": is_research,
+        "can_recompute": is_research,
+        "can_triage": is_research,
+        "can_latency_pass": is_research,
+    }
+
+
+class AddResearchRepoRequest(BaseModel):
+    repo_url: str = Field(..., description="GitHub HTTPS repository URL")
+    identifier: str = Field(..., description="CVE identifier (e.g. CVE-2021-32677) or fix commit SHA")
+    cwe: Optional[str] = Field(None, description="Optional CWE classification (e.g. CWE-22)")
+
+
+class ExcludeRepoRequest(BaseModel):
+    reason: str = Field(..., min_length=5, description="Mandatory written reason for exclusion")
+
+
+class DeleteRepoRequest(BaseModel):
+    reason: Optional[str] = Field(None, description="Written reason (required if repo has completed runs)")
+
+
+class ImportTriageRequest(BaseModel):
+    findings: List[Dict[str, Any]] = Field(..., description="List of findings with triage decisions")
 
 
 # ---------------------------------------------------------------------------
@@ -706,7 +754,7 @@ def _execute_benchmark(repo_url: str, test_type: str) -> BenchmarkResult:
 # Main endpoint
 # ---------------------------------------------------------------------------
 
-@router.post("/benchmark", response_model=BenchmarkResponse)
+@read_router.post("/benchmark", response_model=BenchmarkResponse)
 async def run_benchmark(request: BenchmarkRequest) -> BenchmarkResponse:
     """
     Fair, independent benchmark evaluation.
@@ -733,3 +781,383 @@ async def run_benchmark(request: BenchmarkRequest) -> BenchmarkResponse:
         metrics=metrics,
         timestamp=datetime.utcnow().isoformat() + "Z",
     )
+
+
+# ---------------------------------------------------------------------------
+# Research-Grade Independent Ground-Truth Benchmark Endpoints
+# ---------------------------------------------------------------------------
+
+@read_router.get("/benchmarks/overview")
+def get_benchmarks_overview(
+    verified_only: bool = Query(False, description="Filter for verified ground-truth repositories only"),
+    db: Session = Depends(get_benchmark_read_db),
+) -> Dict[str, Any]:
+    """
+    Returns macro-averages for each tool across all active research repos,
+    sample size (N total, M verified), and upper-bound false positive warnings.
+    """
+    service = BenchmarkReadService(db)
+    return service.get_overview_macro_metrics(verified_only=verified_only)
+
+
+@read_router.get("/benchmarks/repos")
+def get_benchmarks_repos(db: Session = Depends(get_benchmark_read_db)) -> List[Dict[str, Any]]:
+    """
+    Returns the list of research benchmark repositories with pinned SHAs and per-tool metrics.
+    """
+    service = BenchmarkReadService(db)
+    return service.get_research_repos()
+
+
+@research_router.post("/benchmarks/repos")
+def add_research_repository(
+    body: AddResearchRepoRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Admin endpoint to trigger automatic one-step research repository ingestion:
+    resolves commits, extracts diffs, generates ground truth, scans dual commits,
+    and recalculates general averages.
+    """
+    from src.benchmarks_research.service import BenchmarkService, DuplicateRepoError
+    service = BenchmarkService(db)
+    try:
+        repo = service.add_research_repo(url=body.repo_url, identifier=body.identifier, cwe=body.cwe)
+        return {"status": "queued", "repo": repo.to_dict()}
+    except DuplicateRepoError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        logger.exception("Failed to add research repository")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@research_router.get("/benchmarks/repos/{repo_id}/run-plan")
+def get_benchmark_run_plan(
+    repo_id: str,
+    force_rescan: bool = Query(False, description="If true, ignores result cache and marks all tools for re-scan"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Preview which tools will reuse cached results vs re-scan before confirming."""
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        return service.get_run_plan(repo_id, force_rescan=force_rescan)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@research_router.post("/benchmarks/repos/{repo_id}/run")
+def run_research_repository(
+    repo_id: str,
+    tool: Optional[str] = Query(None, description="Optional single tool name to re-run (reusing cached results for others)"),
+    force_rescan: bool = Query(False, description="Force full re-scan, ignoring cached tool results"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Starts or re-runs the automated benchmark pipeline (all tools or a single tool).
+    Append-only: prior runs are marked superseded, never deleted.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        repo = service.run_repo_pipeline(repo_id, tool=tool, force_rescan=force_rescan)
+        return {"status": "started", "tool": tool, "force_rescan": force_rescan, "repo": repo.to_dict()}
+    except ValueError as e:
+        raise HTTPException(status_code=409 if "already" in str(e).lower() else 400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@research_router.post("/benchmarks/repos/{repo_id}/retry")
+def retry_research_repository(
+    repo_id: str,
+    tool: Optional[str] = Query(None, description="Optional single tool name to retry"),
+    force_rescan: bool = Query(False, description="Force full re-scan, ignoring cached tool results"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Retries an existing research repo pipeline without deleting prior run history.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        repo = service.retry_repo_pipeline(repo_id, tool=tool, force_rescan=force_rescan)
+        return {"status": "retrying", "tool": tool, "force_rescan": force_rescan, "repo": repo.to_dict()}
+    except ValueError as e:
+        raise HTTPException(status_code=409 if "already" in str(e).lower() else 400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@research_router.post("/benchmarks/repos/{repo_id}/exclude")
+def exclude_research_repository(
+    repo_id: str,
+    body: ExcludeRepoRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Excludes a repository from general averages with a mandatory written reason.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        repo = service.exclude_repo(repo_id, body.reason)
+        return {"status": "excluded", "repo": repo.to_dict()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@research_router.post("/benchmarks/repos/{repo_id}/unexclude")
+def unexclude_research_repository(
+    repo_id: str,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Restores an excluded repository back into general macro-averages.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        repo = service.unexclude_repo(repo_id)
+        return {"status": "re-included", "repo": repo.to_dict()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@research_router.delete("/benchmarks/repos/{repo_id}")
+def delete_research_repository(
+    repo_id: str,
+    body: Optional[DeleteRepoRequest] = None,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Permanently deletes a research repository, all runs/findings/metrics,
+    its ground-truth manifest, and cached directories. Logs an audit record
+    if the repository had completed runs.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        reason = body.reason if body else None
+        return service.delete_repo(repo_id, reason=reason)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Failed to delete research repository %s", repo_id)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@research_router.get("/benchmarks/repos/{repo_id}/blind-triage")
+def export_blind_triage_findings(
+    repo_id: str,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Exports unique findings with tool identities blinded (Tool-Alpha, Tool-Beta)
+    for objective human review.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        return service.export_blind_triage(repo_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@research_router.post("/benchmarks/repos/{repo_id}/verified-triage")
+def import_verified_triage_findings(
+    repo_id: str,
+    body: ImportTriageRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Imports human triage decisions and upgrades repo from 'provisional' to 'verified'.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        repo = service.import_verified_triage(repo_id, body.findings)
+        return {"status": "verified", "repo": repo.to_dict()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@read_router.get("/benchmarks/repos/{repo_id}")
+def get_benchmark_repo_detail(repo_id: str, db: Session = Depends(get_benchmark_read_db)) -> Dict[str, Any]:
+    """
+    Returns detailed ground truth and per-tool metric drilldown for a single research repo.
+    """
+    service = BenchmarkReadService(db)
+    detail = service.get_repo_detail(repo_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail=f"Research repository '{repo_id}' not found.")
+    return detail
+
+
+@research_router.post("/benchmarks/seed")
+def seed_benchmark_manifests(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Admin endpoint to sync ground-truth manifests from disk into the database.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    repos = service.sync_manifests_to_db()
+    return {"status": "ok", "synced_repos": len(repos), "repos": [r.name for r in repos]}
+
+
+@research_router.get("/benchmarks/triage/sample")
+def export_sampled_precision_endpoint(
+    per_tool: int = Query(30, ge=1, le=200, description="Max unmatched findings to sample per tool"),
+    seed: int = Query(42, description="Deterministic RNG seed"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Exports a deterministic, repo-stratified, blinded CSV sample of unmatched (FP)
+    findings across tools for human precision auditing.
+    """
+    from src.benchmarks_research.sampled_precision import export_sampled_precision_csv
+    try:
+        return export_sampled_precision_csv(db, per_tool=per_tool, seed=seed)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to export sampled precision CSV: {e}")
+
+
+class ImportSampledPrecisionRequest(BaseModel):
+    csv_content: Optional[str] = Field(None, description="Optional raw CSV text; defaults to benchmarks/triage/sampled_precision_sample.csv")
+    labeled_by: str = Field("user", description="Annotator identifier")
+
+
+@research_router.post("/benchmarks/triage/sample/import")
+def import_sampled_precision_endpoint(
+    body: Optional[ImportSampledPrecisionRequest] = None,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Validates and imports labeled sampled-precision CSV rows (append-only)
+    and returns per-tool sampled precision with 95% Wilson intervals.
+    """
+    from src.benchmarks_research.sampled_precision import import_sampled_precision_csv
+    try:
+        return import_sampled_precision_csv(
+            db,
+            csv_content=body.csv_content if body else None,
+            labeled_by=body.labeled_by if body else "user",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to import sampled precision CSV: {e}")
+
+
+@research_router.post("/benchmarks/repos/{repo_id}/recompute")
+def recompute_repo_metrics_endpoint(
+    repo_id: str,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Re-evaluates stored active findings against the latest ground-truth manifest
+    and cwe_map.json without re-scanning. Appends a new run_version.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        return service.recompute_metrics(repo_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Failed to recompute metrics for %s", repo_id)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@research_router.post("/benchmarks/recompute-all")
+def recompute_all_metrics_endpoint(
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Recomputes metrics across all non-running repositories without re-scanning.
+    """
+    from src.benchmarks_research.service import BenchmarkService
+    service = BenchmarkService(db)
+    try:
+        return service.recompute_all_metrics()
+    except Exception as e:
+        logger.exception("Failed to recompute all metrics")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class LatencyPassRequest(BaseModel):
+    repo_ids: Optional[List[str]] = Field(None, description="Selected repository IDs; defaults to all active repos")
+    repeats: int = Field(3, ge=1, le=10, description="Number of sequential repeats per tool per repo")
+
+
+@research_router.post("/benchmarks/latency-pass")
+def start_latency_pass_endpoint(
+    body: Optional[LatencyPassRequest] = None,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Starts an isolated sequential latency pass (separate from detection runs).
+    Refuses if any detection pipeline or latency pass is currently running.
+    """
+    from src.benchmarks_research.latency_pass import trigger_latency_pass_async
+    from src.db.benchmark_models import BenchmarkLatencyPass, ResearchRepo
+
+    running_repo = db.query(ResearchRepo).filter(ResearchRepo.status == "running").first()
+    if running_repo:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot start latency pass while '{running_repo.name}' is running ({running_repo.job_stage}).",
+        )
+    running_pass = db.query(BenchmarkLatencyPass).filter(BenchmarkLatencyPass.status == "running").first()
+    if running_pass:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Latency pass v{running_pass.pass_version} is already running.",
+        )
+
+    repo_ids = body.repo_ids if body else None
+    repeats = body.repeats if body else 3
+    trigger_latency_pass_async(repo_ids=repo_ids, repeats=repeats)
+    return {
+        "status": "queued",
+        "repeats": repeats,
+        "repo_ids": repo_ids,
+        "message": "Isolated sequential latency pass started in background.",
+    }
+
+
+@read_router.get("/benchmarks/latency-pass/latest")
+def get_latest_latency_pass_endpoint(db: Session = Depends(get_benchmark_read_db)) -> Dict[str, Any]:
+    """Returns the latest completed latency pass (with staleness check if research package available) and any active pass."""
+    from src.db.benchmark_models import BenchmarkLatencyPass
+
+    latest = get_latest_latency_pass_from_db(db)
+    running = (
+        db.query(BenchmarkLatencyPass)
+        .filter(BenchmarkLatencyPass.status == "running")
+        .order_by(BenchmarkLatencyPass.pass_version.desc())
+        .first()
+    )
+    return {
+        "latest": latest,
+        "running": running.to_dict() if running else None,
+    }
+
+
+def create_benchmark_router(mode: Optional[str] = None) -> APIRouter:
+    """
+    Builds the benchmark APIRouter for the given mode ('readonly' | 'research').
+    In 'readonly' mode (default), mutating/research endpoints are NOT registered and return 404.
+    """
+    resolved_mode = mode if mode is not None else get_benchmark_mode()
+    combined = APIRouter(tags=["Benchmark"])
+    combined.include_router(read_router)
+    if resolved_mode == "research":
+        combined.include_router(research_router)
+    return combined
+
+
+router = create_benchmark_router()
+

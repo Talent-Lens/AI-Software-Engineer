@@ -1,0 +1,71 @@
+{
+  "repo_name": "Parsl/parsl (013a9284)",
+  "url": "https://github.com/Parsl/parsl",
+  "pinned_vulnerable_sha": "2c37ae3e75137095302dac5f9cd3ca956cb51a47",
+  "pinned_clean_sha": "013a928461e70f38a33258bd525a351ed828e974",
+  "language": "python",
+  "loc": 24956,
+  "description": "Auto-extracted benchmark for CVE-2026-21892",
+  "label_quality": "provisional",
+  "labeled_findings": [
+    {
+      "id": "GT-CVE-2026-21892-001",
+      "file": "parsl/monitoring/visualization/views.py",
+      "line_start": 146,
+      "line_end": 146,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 013a9284. Changed 1 line(s) in parsl/monitoring/visualization/views.py.",
+      "deleted_lines": [
+        "               WHERE task.run_id='%s'\"\"\" % (workflow_id)"
+      ],
+      "added_lines": [
+        "               WHERE task.run_id=:run_id\"\"\""
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-21892-002",
+      "file": "parsl/monitoring/visualization/views.py",
+      "line_start": 148,
+      "line_end": 148,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 013a9284. Changed 1 line(s) in parsl/monitoring/visualization/views.py.",
+      "deleted_lines": [
+        "    df_tasks = pd.read_sql_query(query, db.engine)"
+      ],
+      "added_lines": [
+        "    df_tasks = pd.read_sql_query(sqlalchemy.text(query), db.engine, params={\"run_id\": workflow_id})"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-21892-003",
+      "file": "parsl/monitoring/visualization/views.py",
+      "line_start": 169,
+      "line_end": 172,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 013a9284. Changed 4 line(s) in parsl/monitoring/visualization/views.py.",
+      "deleted_lines": [
+        "    df_task_tries = pd.read_sql_query(\"\"\"SELECT task.task_id, task_func_name,",
+        "                                      task_try_time_launched, task_try_time_running, task_try_time_returned from task, try",
+        "                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'\"\"\"",
+        "                                      % (workflow_id, workflow_id), db.engine)"
+      ],
+      "added_lines": [
+        "",
+        "    query = \"\"\"SELECT task.task_id, task_func_name,",
+        "               task_try_time_launched, task_try_time_running, task_try_time_returned from task, try",
+        "               WHERE task.task_id = try.task_id AND task.run_id=:run_id and try.run_id=task.run_id\"\"\"",
+        "    df_task_tries = pd.read_sql_query(query, db.engine, params={\"run_id\": workflow_id})"
+      ]
+    }
+  ],
+  "clean_negative_regions": []
+}

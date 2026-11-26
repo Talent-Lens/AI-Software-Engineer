@@ -1,0 +1,26 @@
+{
+  "repo_name": "stamparm/DSVW (9ca3c9ac)",
+  "url": "https://github.com/stamparm/DSVW",
+  "pinned_vulnerable_sha": "9ca3c9acf3defa0a6148d40e5f5cebeb5dcbb908",
+  "pinned_clean_sha": null,
+  "repo_type": "intentionally_vulnerable",
+  "language": "python",
+  "loc": 98,
+  "label_quality": "verified",
+  "description": "Damn Small Vulnerable Web (DSVW) — <100 LoC intentionally vulnerable Python web server.",
+  "labeled_findings": [
+    {"id": "DSVW-001", "file": "dsvw.py", "line_start": 22, "line_end": 22, "cwe": "CWE-89", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "SQL Injection via string concatenation in cursor.execute"},
+    {"id": "DSVW-002", "file": "dsvw.py", "line_start": 27, "line_end": 27, "cwe": "CWE-502", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "Insecure Deserialization via pickle.loads"},
+    {"id": "DSVW-003", "file": "dsvw.py", "line_start": 29, "line_end": 29, "cwe": "CWE-22", "severity": "HIGH", "label": "vulnerable", "source": "repo-code-verified", "notes": "Path Traversal / SSRF via open(params['path']) / FETCH(params['path'])"},
+    {"id": "DSVW-004", "file": "dsvw.py", "line_start": 31, "line_end": 31, "cwe": "CWE-78", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "Command Injection via subprocess.run(..., shell=True)"},
+    {"id": "DSVW-005", "file": "dsvw.py", "line_start": 33, "line_end": 33, "cwe": "CWE-611", "severity": "HIGH", "label": "vulnerable", "source": "repo-code-verified", "notes": "XXE via lxml.etree.XMLParser(resolve_entities=True)"},
+    {"id": "DSVW-006", "file": "dsvw.py", "line_start": 35, "line_end": 35, "cwe": "CWE-643", "severity": "HIGH", "label": "vulnerable", "source": "repo-code-verified", "notes": "XPath Injection via .xpath(... % params['name'])"},
+    {"id": "DSVW-007", "file": "dsvw.py", "line_start": 42, "line_end": 42, "cwe": "CWE-89", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "SQL Injection in comment insert"},
+    {"id": "DSVW-008", "file": "dsvw.py", "line_start": 49, "line_end": 49, "cwe": "CWE-95", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "Remote File Inclusion / Code Execution via exec(program, envs)"},
+    {"id": "DSVW-009", "file": "dsvw.py", "line_start": 55, "line_end": 55, "cwe": "CWE-94", "severity": "HIGH", "label": "vulnerable", "source": "repo-code-verified", "notes": "SSTI / format-string injection via params['tmpl'].format(...)"},
+    {"id": "DSVW-010", "file": "dsvw.py", "line_start": 61, "line_end": 61, "cwe": "CWE-89", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "SQL Injection in /login"},
+    {"id": "DSVW-011", "file": "dsvw.py", "line_start": 62, "line_end": 62, "cwe": "CWE-330", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-code-verified", "notes": "Insecure PRNG for SESSIONID via random.choices"},
+    {"id": "DSVW-012", "file": "dsvw.py", "line_start": 70, "line_end": 70, "cwe": "CWE-601", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-code-verified", "notes": "Open Redirect via Location header"}
+  ],
+  "clean_negative_regions": []
+}

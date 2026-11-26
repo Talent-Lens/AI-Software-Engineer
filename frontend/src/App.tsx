@@ -384,7 +384,7 @@ export const App: React.FC = () => {
 
       {/* Main Workbench Body Area */}
       <div className="flex-1 flex overflow-hidden">
-        <main className="flex-1 flex overflow-hidden relative">
+        <main className={`flex-1 flex relative ${currentView === 'eval' ? 'overflow-y-auto' : 'overflow-hidden'}`}>
           {currentView === 'eval' ? (
             <EvalDashboard />
           ) : (

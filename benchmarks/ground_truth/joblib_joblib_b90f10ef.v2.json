@@ -1,0 +1,40 @@
+{
+  "schema_version": "v2",
+  "supersedes": "joblib_joblib_b90f10ef.json",
+  "revision_reason": "Step 2 & 3: AST/tokenize noise filter dropped docstring-only hunk (joblib/parallel.py:507); replaced malformed URL CWE with CWE-94 (Improper Control of Generation of Code) confirmed via GitHub Advisory GHSA-6hrg-qmvc-2xh8 and NVD CVE-2022-21797.",
+  "repo_name": "joblib/joblib (b90f10ef)",
+  "url": "https://github.com/joblib/joblib",
+  "cve_id": "CVE-2022-21797",
+  "advisory_id": "GHSA-6hrg-qmvc-2xh8",
+  "cwe_source": "GitHub Advisory GHSA-6hrg-qmvc-2xh8 & NVD CVE-2022-21797",
+  "pinned_vulnerable_sha": "1fdf3086674d7b1be27688e8c7aebd3159d89997",
+  "pinned_clean_sha": "b90f10efeb670a2cc877fb88ebb3f2019189e059",
+  "language": "python",
+  "loc": 15280,
+  "description": "Auto-extracted benchmark for b90f10ef (v2: AST/tokenize noise filter + CWE-94)",
+  "label_quality": "provisional",
+  "labeled_findings": [
+    {
+      "id": "GT-AUTO-001",
+      "file": "joblib/parallel.py",
+      "line_start": 1052,
+      "line_end": 1052,
+      "cwe": "CWE-94",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit b90f10ef. Changed 1 line(s) in joblib/parallel.py.",
+      "deleted_lines": [
+        "                pre_dispatch = eval(pre_dispatch)"
+      ],
+      "added_lines": [
+        "                pre_dispatch = eval(",
+        "                    pre_dispatch,",
+        "                    {\"n_jobs\": n_jobs, \"__builtins__\": {}},  # globals",
+        "                    {}  # locals",
+        "                )"
+      ]
+    }
+  ],
+  "clean_negative_regions": []
+}

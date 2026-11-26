@@ -1,0 +1,75 @@
+{
+  "repo_name": "aio-libs/aiohttp (1c335944)",
+  "url": "https://github.com/aio-libs/aiohttp",
+  "pinned_vulnerable_sha": "33ccdfb0a12690af5bb49bda2319ec0907fa7827",
+  "pinned_clean_sha": "1c335944d6a8b1298baf179b7c0b3069f10c514b",
+  "language": "python",
+  "loc": 20019,
+  "description": "Auto-extracted benchmark for 1c335944",
+  "label_quality": "provisional",
+  "labeled_findings": [
+    {
+      "id": "GT-AUTO-001",
+      "file": "aiohttp/web_urldispatcher.py",
+      "line_start": 575,
+      "line_end": 575,
+      "cwe": "unknown",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 1c335944. Changed 0 line(s) in aiohttp/web_urldispatcher.py.",
+      "deleted_lines": [],
+      "added_lines": [
+        "            unresolved_path = self._directory.joinpath(filename)"
+      ]
+    },
+    {
+      "id": "GT-AUTO-002",
+      "file": "aiohttp/web_urldispatcher.py",
+      "line_start": 577,
+      "line_end": 578,
+      "cwe": "unknown",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 1c335944. Changed 2 line(s) in aiohttp/web_urldispatcher.py.",
+      "deleted_lines": [
+        "                filepath = self._directory.joinpath(filename).resolve()",
+        "                if not self._follow_symlinks:"
+      ],
+      "added_lines": [
+        "                if self._follow_symlinks:",
+        "                    normalized_path = Path(os.path.normpath(unresolved_path))",
+        "                    normalized_path.relative_to(self._directory)",
+        "                    filepath = normalized_path.resolve()",
+        "                else:",
+        "                    filepath = unresolved_path.resolve()"
+      ]
+    },
+    {
+      "id": "GT-AUTO-003",
+      "file": "aiohttp/web_urldispatcher.py",
+      "line_start": 643,
+      "line_end": 644,
+      "cwe": "unknown",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 1c335944. Changed 2 line(s) in aiohttp/web_urldispatcher.py.",
+      "deleted_lines": [
+        "            filepath = self._directory.joinpath(filename).resolve()",
+        "            if not self._follow_symlinks:"
+      ],
+      "added_lines": [
+        "            unresolved_path = self._directory.joinpath(filename)",
+        "            if self._follow_symlinks:",
+        "                normalized_path = Path(os.path.normpath(unresolved_path))",
+        "                normalized_path.relative_to(self._directory)",
+        "                filepath = normalized_path.resolve()",
+        "            else:",
+        "                filepath = unresolved_path.resolve()"
+      ]
+    }
+  ],
+  "clean_negative_regions": []
+}

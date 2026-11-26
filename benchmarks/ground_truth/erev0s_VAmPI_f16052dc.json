@@ -1,0 +1,21 @@
+{
+  "repo_name": "erev0s/VAmPI (f16052dc)",
+  "url": "https://github.com/erev0s/VAmPI",
+  "pinned_vulnerable_sha": "f16052dce83f05847133ec98f01c5193a41de7d8",
+  "pinned_clean_sha": null,
+  "repo_type": "intentionally_vulnerable",
+  "language": "python",
+  "loc": 530,
+  "label_quality": "verified",
+  "description": "VAmPI intentionally vulnerable Flask/OpenAPI3 API security benchmark.",
+  "labeled_findings": [
+    {"id": "VAMPI-001", "file": "models/user_model.py", "line_start": 71, "line_end": 74, "cwe": "CWE-89", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-readme-verified", "notes": "SQL Injection via f-string in User.get_user()"},
+    {"id": "VAMPI-002", "file": "api_views/users.py", "line_start": 186, "line_end": 192, "cwe": "CWE-639", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Unauthorized password change of another user"},
+    {"id": "VAMPI-003", "file": "api_views/books.py", "line_start": 50, "line_end": 58, "cwe": "CWE-639", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Broken Object Level Authorization in get_by_title()"},
+    {"id": "VAMPI-004", "file": "api_views/users.py", "line_start": 60, "line_end": 66, "cwe": "CWE-915", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Mass Assignment of admin flag in register_user()"},
+    {"id": "VAMPI-005", "file": "api_views/users.py", "line_start": 24, "line_end": 26, "cwe": "CWE-200", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Excessive data exposure via /users/v1/_debug"},
+    {"id": "VAMPI-006", "file": "api_views/users.py", "line_start": 143, "line_end": 146, "cwe": "CWE-1333", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Regex DoS in update_email()"},
+    {"id": "VAMPI-007", "file": "config.py", "line_start": 13, "line_end": 13, "cwe": "CWE-798", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Weak hardcoded JWT SECRET_KEY = 'random'"}
+  ],
+  "clean_negative_regions": []
+}

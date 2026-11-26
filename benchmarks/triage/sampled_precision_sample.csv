@@ -1,0 +1,1218 @@
+sample_id,repo,file,line,cwe,message,code_context,label,notes
+SP-001,pypa/setuptools (88807c70),pkg_resources/_vendor/jaraco/context.py,183,CWE-78,,"     176:     exe = 'git' if 'git' in url else 'hg'
+     177:     with dest_ctx() as repo_dir:
+     178:         cmd = [exe, 'clone', url, repo_dir]
+     179:         if branch:
+     180:             cmd.extend(['--branch', branch])
+     181:         devnull = open(os.path.devnull, 'w')
+     182:         stdout = devnull if quiet else None
+>>>  183:         subprocess.check_call(cmd, stdout=stdout)
+     184:         yield repo_dir
+     185: 
+     186: 
+     187: def null():
+     188:     """"""
+     189:     A null context suitable to stand in for a meaningful context.
+     190: ",,
+SP-002,joblib/joblib (b90f10ef),joblib/externals/loky/backend/utils.py,110,CWE-78,Starting a process with a partial executable path,"     103:         if e.errno != errno.ESRCH:
+     104:             raise  # pragma: no cover
+     105: 
+     106: 
+     107: def _posix_recursive_kill(pid):
+     108:     """"""Recursively kill the descendants of a process before killing it.""""""
+     109:     try:
+>>>  110:         children_pids = subprocess.check_output(
+     111:             [""pgrep"", ""-P"", str(pid)], stderr=None, text=True
+     112:         )
+     113:     except subprocess.CalledProcessError as e:
+     114:         # `ps` returns 1 when no child process has been found
+     115:         if e.returncode == 1:
+     116:             children_pids = ''
+     117:         else:",,
+SP-003,pypa/setuptools (88807c70),setuptools/command/easy_install.py,2003,CWE-78,,"    1996:     except OSError:
+    1997:         return executable
+    1998:     return magic == '#!'
+    1999: 
+    2000: 
+    2001: def nt_quote_arg(arg):
+    2002:     """"""Quote a command line argument according to Windows parsing rules""""""
+>>> 2003:     return subprocess.list2cmdline([arg])
+    2004: 
+    2005: 
+    2006: def is_python_script(script_text, filename):
+    2007:     """"""Is this text, as a whole, a Python script? (as opposed to shell/bat/etc.""""""
+    2008:     if filename.endswith('.py') or filename.endswith('.pyw'):
+    2009:         return True  # extension says it's Python
+    2010:     if is_python(script_text, filename):",,
+SP-004,pypa/setuptools (88807c70),setuptools/command/easy_install.py,2086,CWE-78,,"    2079:         line parseable by shlex.split.
+    2080:         """"""
+    2081:         items = shlex.split(string, **cls.split_args)
+    2082:         return cls(items)
+    2083: 
+    2084:     def install_options(self, script_text):
+    2085:         self.options = shlex.split(self._extract_options(script_text))
+>>> 2086:         cmdline = subprocess.list2cmdline(self)
+    2087:         if not isascii(cmdline):
+    2088:             self.options[:0] = ['-x']
+    2089: 
+    2090:     @staticmethod
+    2091:     def _extract_options(orig_script):
+    2092:         """"""
+    2093:         Extract any options from the first line of the script.",,
+SP-005,pypa/setuptools (88807c70),setuptools/_vendor/jaraco/text/__init__.py,402,CWE-116,Comments ending with --> are matched differently from comments ending with --!>. The first is matched with capture group 1 and comments ending with --!> are matched with capture group 2.,"     395:     >>> print(simple_html_strip('Somebody <!-- do not --> tell the truth.'))
+     396:     Somebody  tell the truth.
+     397: 
+     398:     >>> print(simple_html_strip('What about<br/>\nmultiple lines?'))
+     399:     What about
+     400:     multiple lines?
+     401:     """"""
+>>>  402:     html_stripper = re.compile('(<!--.*?-->)|(<[^>]*>)|([^<]+)', re.DOTALL)
+     403:     texts = (match.group(3) or '' for match in html_stripper.finditer(s))
+     404:     return ''.join(texts)
+     405: 
+     406: 
+     407: class SeparatedValues(str):
+     408:     """"""
+     409:     A string separated by a separator. Overrides __iter__ for getting",,
+SP-006,aio-libs/aiohttp (1c335944),aiohttp/web.py,577,CWE-706,,"     570:     # Import logic
+     571:     mod_str, _, func_str = args.entry_func.partition("":"")
+     572:     if not func_str or not mod_str:
+     573:         arg_parser.error(""'entry-func' not in 'module:function' syntax"")
+     574:     if mod_str.startswith("".""):
+     575:         arg_parser.error(""relative module names not supported"")
+     576:     try:
+>>>  577:         module = import_module(mod_str)
+     578:     except ImportError as ex:
+     579:         arg_parser.error(f""unable to import {mod_str}: {ex}"")
+     580:     try:
+     581:         func = getattr(module, func_str)
+     582:     except AttributeError:
+     583:         arg_parser.error(f""module {mod_str!r} has no attribute {func_str!r}"")
+     584: ",,
+SP-007,pypa/setuptools (88807c70),setuptools/_distutils/config.py,62,CWE-259,This hardcoded value is [used as credentials](1).,"      55:             repository = self.repository or self.DEFAULT_REPOSITORY
+      56: 
+      57:             config = RawConfigParser()
+      58:             config.read(rc, encoding='utf-8')
+      59:             sections = config.sections()
+      60:             if 'distutils' in sections:
+      61:                 # let's get the list of servers
+>>>   62:                 index_servers = config.get('distutils', 'index-servers')
+      63:                 _servers = [
+      64:                     server.strip()
+      65:                     for server in index_servers.split('\n')
+      66:                     if server.strip() != ''
+      67:                 ]
+      68:                 if _servers == []:
+      69:                     # nothing set, let's try to get the default pypi",,
+SP-008,joblib/joblib (b90f10ef),joblib/externals/loky/backend/popen_loky_posix.py,164,CWE-502,"Pickle and modules that wrap it can be unsafe when used to deserialize untrusted data, possible security issue.","     157: 
+     158:     info = {}
+     159:     exitcode = 1
+     160:     try:
+     161:         with os.fdopen(args.pipe, 'rb') as from_parent:
+     162:             process.current_process()._inheriting = True
+     163:             try:
+>>>  164:                 prep_data = pickle.load(from_parent)
+     165:                 spawn.prepare(prep_data)
+     166:                 process_obj = pickle.load(from_parent)
+     167:             finally:
+     168:                 del process.current_process()._inheriting
+     169: 
+     170:         exitcode = process_obj._bootstrap()
+     171:     except Exception:",,
+SP-009,joblib/joblib (b90f10ef),joblib/externals/loky/backend/popen_loky_win32.py,148,CWE-502,"pickle deserializes untrusted data into arbitrary Python objects, allowing remote code execution.","     141:     assert is_forking(sys.argv)
+     142: 
+     143:     handle = int(sys.argv[-1])
+     144:     fd = msvcrt.open_osfhandle(handle, os.O_RDONLY)
+     145:     from_parent = os.fdopen(fd, 'rb')
+     146: 
+     147:     process.current_process()._inheriting = True
+>>>  148:     preparation_data = load(from_parent)
+     149:     spawn.prepare(preparation_data)
+     150:     self = load(from_parent)
+     151:     process.current_process()._inheriting = False
+     152: 
+     153:     from_parent.close()
+     154: 
+     155:     exitcode = self._bootstrap()",,
+SP-010,pypa/setuptools (88807c70),setuptools/_distutils/command/upload.py,183,CWE-699,"urlopen allows unexpected schemes (e.g., file://) if not restricted to http/https.","     176:             'Content-length': str(len(body)),
+     177:             'Authorization': auth,
+     178:         }
+     179: 
+     180:         request = Request(self.repository, data=body, headers=headers)
+     181:         # send the data
+     182:         try:
+>>>  183:             result = urlopen(request)
+     184:             status = result.getcode()
+     185:             reason = result.msg
+     186:         except HTTPError as e:
+     187:             status = e.code
+     188:             reason = e.msg
+     189:         except OSError as e:
+     190:             self.announce(str(e), logging.ERROR)",,
+SP-011,aio-libs/aiohttp (1c335944),aiohttp/helpers.py,264,CWE-259,Possible hardcoded password: '',"     257:     # and login will be empty string if not specified. From 3.11,
+     258:     # login and account will be empty string if not specified.
+     259:     username = login if (login or account is None) else account
+     260: 
+     261:     # TODO(PY311): Remove this, as password will be empty string
+     262:     # if not specified
+     263:     if password is None:
+>>>  264:         password = """"
+     265: 
+     266:     return BasicAuth(username, password)
+     267: 
+     268: 
+     269: def proxies_from_env() -> Dict[str, ProxyInfo]:
+     270:     proxy_urls = {
+     271:         k: URL(v)",,
+SP-012,pypa/setuptools (88807c70),setuptools/_distutils/config.py,48,CWE-312,"This expression stores [sensitive data (password)](1) as clear text.
+This expression stores [sensitive data (password)](2) as clear text.
+This expression stores [sensitive data (password)](3) as clear text.
+This expression stores [sensitive data (password)](4) as clear text.","      41:         return os.path.join(os.path.expanduser('~'), '.pypirc')
+      42: 
+      43:     def _store_pypirc(self, username, password):
+      44:         """"""Creates a default .pypirc file.""""""
+      45:         rc = self._get_rc_file()
+      46:         raw = os.open(rc, os.O_CREAT | os.O_WRONLY, 0o600)
+      47:         with os.fdopen(raw, 'w', encoding='utf-8') as f:
+>>>   48:             f.write(DEFAULT_PYPIRC % (username, password))
+      49: 
+      50:     def _read_pypirc(self):  # noqa: C901
+      51:         """"""Reads the .pypirc file.""""""
+      52:         rc = self._get_rc_file()
+      53:         if os.path.exists(rc):
+      54:             self.announce('Using PyPI login from %s' % rc)
+      55:             repository = self.repository or self.DEFAULT_REPOSITORY",,
+SP-013,pypa/setuptools (88807c70),setuptools/_vendor/more_itertools/more.py,3320,CWE-330,Standard pseudo-random generators are not suitable for security/cryptographic purposes.,"    3313:     # weight-keys and elements, then heapify the list.
+    3314:     reservoir = take(k, zip(weight_keys, iterable))
+    3315:     heapify(reservoir)
+    3316: 
+    3317:     # The number of jumps before changing the reservoir is a random variable
+    3318:     # with an exponential distribution. Sample it using random() and logs.
+    3319:     smallest_weight_key, _ = reservoir[0]
+>>> 3320:     weights_to_skip = log(random()) / smallest_weight_key
+    3321: 
+    3322:     for weight, element in zip(weights, iterable):
+    3323:         if weight >= weights_to_skip:
+    3324:             # The notation here is consistent with the paper, but we store
+    3325:             # the weight-keys in log-space for better numerical stability.
+    3326:             smallest_weight_key, _ = reservoir[0]
+    3327:             t_w = exp(weight * smallest_weight_key)",,
+SP-014,joblib/joblib (b90f10ef),joblib/externals/cloudpickle/cloudpickle_fast.py,359,CWE-502,,"     352:     try:
+     353:         # Read the whole file
+     354:         curloc = obj.tell()
+     355:         obj.seek(0)
+     356:         contents = obj.read()
+     357:         obj.seek(curloc)
+     358:     except IOError as e:
+>>>  359:         raise pickle.PicklingError(
+     360:             ""Cannot pickle file %s as it cannot be read"" % name
+     361:         ) from e
+     362:     retval.write(contents)
+     363:     retval.seek(curloc)
+     364: 
+     365:     retval.name = name
+     366:     return _file_reconstructor, (retval,)",,
+SP-015,pypa/setuptools (88807c70),setuptools/_vendor/more_itertools/recipes.py,492,CWE-327,Standard random module PRNG is predictable and unsuitable for security/cryptographic purposes.,"     485:         ('a', 2, 'd', 3)
+     486: 
+     487:     This equivalent to taking a random selection from
+     488:     ``itertools.product(*args, **kwarg)``.
+     489: 
+     490:     """"""
+     491:     pools = [tuple(pool) for pool in args] * repeat
+>>>  492:     return tuple(choice(pool) for pool in pools)
+     493: 
+     494: 
+     495: def random_permutation(iterable, r=None):
+     496:     """"""Return a random *r* length permutation of the elements in *iterable*.
+     497: 
+     498:     If *r* is not specified or is ``None``, then *r* defaults to the length of
+     499:     *iterable*.",,
+SP-016,pypa/setuptools (88807c70),setuptools/_vendor/backports/tarfile.py,320,CWE-732,Overly permissive mask in open sets file to world writable.,"     313:     def __init__(self, name, mode):
+     314:         mode = {
+     315:             ""r"": os.O_RDONLY,
+     316:             ""w"": os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+     317:         }[mode]
+     318:         if hasattr(os, ""O_BINARY""):
+     319:             mode |= os.O_BINARY
+>>>  320:         self.fd = os.open(name, mode, 0o666)
+     321: 
+     322:     def close(self):
+     323:         os.close(self.fd)
+     324: 
+     325:     def read(self, size):
+     326:         return os.read(self.fd, size)
+     327: ",,
+SP-017,pypa/setuptools (88807c70),setuptools/_distutils/command/_framework_compat.py,44,CWE-78,Subprocess invocation audited for possible command execution risks.,"      37: )
+      38: 
+      39: 
+      40: @functools.lru_cache
+      41: def vars():
+      42:     if not enabled():
+      43:         return {}
+>>>   44:     homebrew_prefix = subprocess.check_output(['brew', '--prefix'], text=True).strip()
+      45:     return locals()
+      46: 
+      47: 
+      48: def scheme(name):
+      49:     """"""
+      50:     Override the selected scheme for posix_prefix.
+      51:     """"""",,
+SP-018,pypa/setuptools (88807c70),setuptools/_distutils/ccompiler.py,1011,CWE-95,Using eval() allows arbitrary code execution if untrusted input is passed.,"    1004:         libname,
+    1005:         lib_type='static',
+    1006:         strip_dir=0,
+    1007:         output_dir='',  # or 'shared'
+    1008:     ):
+    1009:         assert output_dir is not None
+    1010:         expected = '""static"", ""shared"", ""dylib"", ""xcode_stub""'
+>>> 1011:         if lib_type not in eval(expected):
+    1012:             raise ValueError(f""'lib_type' must be {expected}"")
+    1013:         fmt = getattr(self, lib_type + ""_lib_format"")
+    1014:         ext = getattr(self, lib_type + ""_lib_extension"")
+    1015: 
+    1016:         dir, base = os.path.split(libname)
+    1017:         filename = fmt % (base, ext)
+    1018:         if strip_dir:",,
+SP-019,pypa/setuptools (88807c70),setuptools/_distutils/core.py,266,CWE-95,Using exec() allows arbitrary code execution if untrusted input is passed.,"     259:         try:
+     260:             sys.argv[0] = script_name
+     261:             if script_args is not None:
+     262:                 sys.argv[1:] = script_args
+     263:             # tokenize.open supports automatic encoding detection
+     264:             with tokenize.open(script_name) as f:
+     265:                 code = f.read().replace(r'\r\n', r'\n')
+>>>  266:                 exec(code, g)
+     267:         finally:
+     268:             sys.argv = save_argv
+     269:             _setup_stop_after = None
+     270:     except SystemExit:
+     271:         # Hmm, should we do something if exiting with a non-zero code
+     272:         # (ie. error)?
+     273:         pass",,
+SP-020,joblib/joblib (b90f10ef),joblib/externals/loky/backend/context.py,207,CWE-78,subprocess call - check for execution of untrusted input.,"     200:                 ""wmic CPU Get NumberOfCores /Format:csv"".split(),
+     201:                 capture_output=True, text=True)
+     202:             cpu_info = cpu_info.stdout.splitlines()
+     203:             cpu_info = [l.split("","")[1] for l in cpu_info
+     204:                         if (l and l != ""Node,NumberOfCores"")]
+     205:             cpu_count_physical = sum(map(int, cpu_info))
+     206:         elif sys.platform == ""darwin"":
+>>>  207:             cpu_info = subprocess.run(
+     208:                 ""sysctl -n hw.physicalcpu"".split(),
+     209:                 capture_output=True, text=True)
+     210:             cpu_info = cpu_info.stdout
+     211:             cpu_count_physical = int(cpu_info)
+     212:         else:
+     213:             raise NotImplementedError(f""unsupported platform: {sys.platform}"")
+     214: ",,
+SP-021,pypa/setuptools (88807c70),setuptools/build_meta.py,311,CWE-95,Using exec() allows arbitrary code execution if untrusted input is passed.,"     304:         __file__ = os.path.abspath(setup_script)
+     305:         __name__ = '__main__'
+     306: 
+     307:         with _open_setup_script(__file__) as f:
+     308:             code = f.read().replace(r'\r\n', r'\n')
+     309: 
+     310:         try:
+>>>  311:             exec(code, locals())
+     312:         except SystemExit as e:
+     313:             if e.code:
+     314:                 raise
+     315:             # We ignore exit code indicating success
+     316:             SetuptoolsDeprecationWarning.emit(
+     317:                 ""Running `setup.py` directly as CLI tool is deprecated."",
+     318:                 ""Please avoid using `sys.exit(0)` or similar statements """,,
+SP-022,pypa/setuptools (88807c70),pkg_resources/_vendor/more_itertools/more.py,3502,CWE-327,Standard random module PRNG is predictable and unsuitable for security/cryptographic purposes.,"    3495:     # number with a geometric distribution. Sample it using random() and logs.
+    3496:     next_index = k + floor(log(random()) / log(1 - W))
+    3497: 
+    3498:     for index, element in enumerate(iterable, k):
+    3499:         if index == next_index:
+    3500:             reservoir[randrange(k)] = element
+    3501:             # The new W is the largest in a sample of k U(0, `old_W`) numbers
+>>> 3502:             W *= exp(log(random()) / k)
+    3503:             next_index += floor(log(random()) / log(1 - W)) + 1
+    3504: 
+    3505:     return reservoir
+    3506: 
+    3507: 
+    3508: def _sample_weighted(iterable, k, weights):
+    3509:     # Implementation of ""A-ExpJ"" from the 2006 paper by Efraimidis et al. :",,
+SP-023,joblib/joblib (b90f10ef),joblib/pool.py,28,CWE-502,Consider possible security implications associated with HIGHEST_PROTOCOL module.,"      21: try:
+      22:     WindowsError
+      23: except NameError:
+      24:     WindowsError = type(None)
+      25: 
+      26: from pickle import Pickler
+      27: 
+>>>   28: from pickle import HIGHEST_PROTOCOL
+      29: from io import BytesIO
+      30: 
+      31: from ._memmapping_reducer import get_memmapping_reducers
+      32: from ._memmapping_reducer import TemporaryResourcesManager
+      33: from ._multiprocessing_helpers import mp, assert_spawning
+      34: 
+      35: # We need the class definition to derive from it, not the multiprocessing.Pool",,
+SP-024,pypa/setuptools (88807c70),setuptools/msvc.py,97,CWE-78,Subprocess invocation audited for possible command execution risks.,"      90:         ""Microsoft.VisualStudio.Workload.WDExpress"",
+      91:     )
+      92: 
+      93:     for component in suitable_components:
+      94:         # Workaround for `-requiresAny` (only available on VS 2017 > 15.6)
+      95:         with contextlib.suppress(CalledProcessError, OSError, UnicodeDecodeError):
+      96:             path = (
+>>>   97:                 subprocess.check_output([
+      98:                     join(root, ""Microsoft Visual Studio"", ""Installer"", ""vswhere.exe""),
+      99:                     ""-latest"",
+     100:                     ""-prerelease"",
+     101:                     ""-requires"",
+     102:                     component,
+     103:                     ""-property"",
+     104:                     ""installationPath"",",,
+SP-025,pypa/setuptools (88807c70),setuptools/_vendor/more_itertools/more.py,3299,CWE-330,Standard pseudo-random generators are not suitable for security/cryptographic purposes.,"    3292:     next_index = k + floor(log(random()) / log(1 - W))
+    3293: 
+    3294:     for index, element in enumerate(iterable, k):
+    3295: 
+    3296:         if index == next_index:
+    3297:             reservoir[randrange(k)] = element
+    3298:             # The new W is the largest in a sample of k U(0, `old_W`) numbers
+>>> 3299:             W *= exp(log(random()) / k)
+    3300:             next_index += floor(log(random()) / log(1 - W)) + 1
+    3301: 
+    3302:     return reservoir
+    3303: 
+    3304: 
+    3305: def _sample_weighted(iterable, k, weights):
+    3306:     # Implementation of ""A-ExpJ"" from the 2006 paper by Efraimidis et al. :",,
+SP-026,pypa/setuptools (88807c70),setuptools/_distutils/cygwinccompiler.py,16,CWE-78,Consider possible security implications associated with the subprocess module.,"       9: import copy
+      10: import os
+      11: import pathlib
+      12: import re
+      13: import shlex
+      14: import sys
+      15: import warnings
+>>>   16: from subprocess import check_output
+      17: 
+      18: from ._collections import RangeMap
+      19: from .errors import (
+      20:     CCompilerError,
+      21:     CompileError,
+      22:     DistutilsExecError,
+      23:     DistutilsPlatformError,",,
+SP-027,pypa/setuptools (88807c70),setuptools/_distutils/command/register.py,218,CWE-259,Possible hardcoded password: '',"     211:                 data['name'] = input('Username: ')
+     212:             while data['password'] != data['confirm']:
+     213:                 while not data['password']:
+     214:                     data['password'] = getpass.getpass('Password: ')
+     215:                 while not data['confirm']:
+     216:                     data['confirm'] = getpass.getpass(' Confirm: ')
+     217:                 if data['password'] != data['confirm']:
+>>>  218:                     data['password'] = ''
+     219:                     data['confirm'] = None
+     220:                     print(""Password and confirm don't match!"")
+     221:             while not data['email']:
+     222:                 data['email'] = input('   EMail: ')
+     223:             code, result = self.post_to_server(data)
+     224:             if code != 200:
+     225:                 log.info('Server response (%s): %s', code, result)",,
+SP-028,pypa/setuptools (88807c70),setuptools/_vendor/jaraco/functools/__init__.py,522,CWE-95,,"     515:     def decorate(func):
+     516:         @functools.wraps(func)
+     517:         def wrapper(*args, **kwargs):
+     518:             try:
+     519:                 return func(*args, **kwargs)
+     520:             except exceptions:
+     521:                 try:
+>>>  522:                     return eval(use)
+     523:                 except TypeError:
+     524:                     return replace
+     525: 
+     526:         return wrapper
+     527: 
+     528:     return decorate
+     529: ",,
+SP-029,aio-libs/aiohttp (1c335944),aiohttp/web_ws.py,233,CWE-327,Use of weak SHA1 hash for security. Consider usedforsecurity=False,"     226:         try:
+     227:             if not key or len(base64.b64decode(key)) != 16:
+     228:                 raise HTTPBadRequest(text=f""Handshake error: {key!r}"")
+     229:         except binascii.Error:
+     230:             raise HTTPBadRequest(text=f""Handshake error: {key!r}"") from None
+     231: 
+     232:         accept_val = base64.b64encode(
+>>>  233:             hashlib.sha1(key.encode() + WS_KEY).digest()
+     234:         ).decode()
+     235:         response_headers = CIMultiDict(
+     236:             {
+     237:                 hdrs.UPGRADE: ""websocket"",
+     238:                 hdrs.CONNECTION: ""upgrade"",
+     239:                 hdrs.SEC_WEBSOCKET_ACCEPT: accept_val,
+     240:             }",,
+SP-030,pypa/setuptools (88807c70),pkg_resources/__init__.py,1540,CWE-95,,"    1533:             cache[script_filename] = (
+    1534:                 len(script_text),
+    1535:                 0,
+    1536:                 script_text.split('\n'),
+    1537:                 script_filename,
+    1538:             )
+    1539:             script_code = compile(script_text, script_filename, 'exec')
+>>> 1540:             exec(script_code, namespace, namespace)
+    1541: 
+    1542:     def _has(self, path) -> bool:
+    1543:         raise NotImplementedError(
+    1544:             ""Can't perform this operation for unregistered loader type""
+    1545:         )
+    1546: 
+    1547:     def _isdir(self, path) -> bool:",,
+SP-031,pypa/setuptools (88807c70),setuptools/_distutils/msvc9compiler.py,282,CWE-78,subprocess call - check for execution of untrusted input.,"     275:     vcvarsall = find_vcvarsall(version)
+     276:     interesting = {""include"", ""lib"", ""libpath"", ""path""}
+     277:     result = {}
+     278: 
+     279:     if vcvarsall is None:
+     280:         raise DistutilsPlatformError(""Unable to find vcvarsall.bat"")
+     281:     log.debug(""Calling 'vcvarsall.bat %s' (version=%s)"", arch, version)
+>>>  282:     popen = subprocess.Popen(
+     283:         f'""{vcvarsall}"" {arch} & set',
+     284:         stdout=subprocess.PIPE,
+     285:         stderr=subprocess.PIPE,
+     286:     )
+     287:     try:
+     288:         stdout, stderr = popen.communicate()
+     289:         if popen.wait() != 0:",,
+SP-032,pypa/setuptools (88807c70),pkg_resources/_vendor/packaging/tags.py,418,CWE-78,Subprocess invocation audited for possible command execution risks.,"     411:     """"""
+     412:     version_str, _, cpu_arch = platform.mac_ver()
+     413:     if version is None:
+     414:         version = cast(""MacVersion"", tuple(map(int, version_str.split(""."")[:2])))
+     415:         if version == (10, 16):
+     416:             # When built against an older macOS SDK, Python will report macOS 10.16
+     417:             # instead of the real version.
+>>>  418:             version_str = subprocess.run(
+     419:                 [
+     420:                     sys.executable,
+     421:                     ""-sS"",
+     422:                     ""-c"",
+     423:                     ""import platform; print(platform.mac_ver()[0])"",
+     424:                 ],
+     425:                 check=True,",,
+SP-033,pypa/setuptools (88807c70),setuptools/command/easy_install.py,463,CWE-327,Standard random module PRNG is predictable and unsuitable for security/cryptographic purposes.,"     456:         """"""Return a pseudo-tempname base in the install directory.
+     457:         This code is intentionally naive; if a malicious party can write to
+     458:         the target directory you're already in deep doodoo.
+     459:         """"""
+     460:         try:
+     461:             pid = os.getpid()
+     462:         except Exception:
+>>>  463:             pid = random.randint(0, sys.maxsize)
+     464:         return os.path.join(self.install_dir, ""test-easy-install-%s"" % pid)
+     465: 
+     466:     def warn_deprecated_options(self):
+     467:         pass
+     468: 
+     469:     def check_site_dir(self):  # noqa: C901  # is too complex (12)  # FIXME
+     470:         """"""Verify that self.install_dir is .pth-capable dir, if needed""""""",,
+SP-034,pypa/setuptools (88807c70),setuptools/_vendor/more_itertools/more.py,3310,CWE-327,Standard random module PRNG is predictable and unsuitable for security/cryptographic purposes.,"    3303: 
+    3304: 
+    3305: def _sample_weighted(iterable, k, weights):
+    3306:     # Implementation of ""A-ExpJ"" from the 2006 paper by Efraimidis et al. :
+    3307:     # ""Weighted random sampling with a reservoir"".
+    3308: 
+    3309:     # Log-transform for numerical stability for weights that are small/large
+>>> 3310:     weight_keys = (log(random()) / weight for weight in weights)
+    3311: 
+    3312:     # Fill up the reservoir (collection of samples) with the first `k`
+    3313:     # weight-keys and elements, then heapify the list.
+    3314:     reservoir = take(k, zip(weight_keys, iterable))
+    3315:     heapify(reservoir)
+    3316: 
+    3317:     # The number of jumps before changing the reservoir is a random variable",,
+SP-035,pypa/setuptools (88807c70),setuptools/_vendor/jaraco/context.py,63,CWE-939,,"      56:         target_dir = os.path.basename(url).replace('.tar.gz', '').replace('.tgz', '')
+      57:     # In the tar command, use --strip-components=1 to strip the first path and
+      58:     #  then
+      59:     #  use -C to cause the files to be extracted to {target_dir}. This ensures
+      60:     #  that we always know where the files were extracted.
+      61:     os.mkdir(target_dir)
+      62:     try:
+>>>   63:         req = urllib.request.urlopen(url)
+      64:         with tarfile.open(fileobj=req, mode='r|*') as tf:
+      65:             tf.extractall(path=target_dir, filter=strip_first_component)
+      66:         yield target_dir
+      67:     finally:
+      68:         shutil.rmtree(target_dir)
+      69: 
+      70: ",,
+SP-036,pypa/setuptools (88807c70),setuptools/_distutils/config.py,108,CWE-259,This hardcoded value is [used as credentials](1).,"     101:                     if (
+     102:                         current['server'] == repository
+     103:                         or current['repository'] == repository
+     104:                     ):
+     105:                         return current
+     106:             elif 'server-login' in sections:
+     107:                 # old format
+>>>  108:                 server = 'server-login'
+     109:                 if config.has_option(server, 'repository'):
+     110:                     repository = config.get(server, 'repository')
+     111:                 else:
+     112:                     repository = self.DEFAULT_REPOSITORY
+     113:                 return {
+     114:                     'username': config.get(server, 'username'),
+     115:                     'password': config.get(server, 'password'),",,
+SP-037,pypa/setuptools (88807c70),pkg_resources/_vendor/more_itertools/more.py,3513,CWE-327,Standard random module PRNG is predictable and unsuitable for security/cryptographic purposes.,"    3506: 
+    3507: 
+    3508: def _sample_weighted(iterable, k, weights):
+    3509:     # Implementation of ""A-ExpJ"" from the 2006 paper by Efraimidis et al. :
+    3510:     # ""Weighted random sampling with a reservoir"".
+    3511: 
+    3512:     # Log-transform for numerical stability for weights that are small/large
+>>> 3513:     weight_keys = (log(random()) / weight for weight in weights)
+    3514: 
+    3515:     # Fill up the reservoir (collection of samples) with the first `k`
+    3516:     # weight-keys and elements, then heapify the list.
+    3517:     reservoir = take(k, zip(weight_keys, iterable))
+    3518:     heapify(reservoir)
+    3519: 
+    3520:     # The number of jumps before changing the reservoir is a random variable",,
+SP-038,pypa/setuptools (88807c70),setuptools/command/easy_install.py,1089,CWE-96,,"    1082:                 bdist_egg.write_stub(resource, pyfile)
+    1083:         self.byte_compile(to_compile)  # compile .py's
+    1084:         bdist_egg.write_safety_flag(
+    1085:             os.path.join(egg_tmp, 'EGG-INFO'), bdist_egg.analyze_egg(egg_tmp, stubs)
+    1086:         )  # write zip-safety flag
+    1087: 
+    1088:         for name in 'top_level', 'native_libs':
+>>> 1089:             if locals()[name]:
+    1090:                 txt = os.path.join(egg_tmp, 'EGG-INFO', name + '.txt')
+    1091:                 if not os.path.exists(txt):
+    1092:                     with open(txt, 'w', encoding=""utf-8"") as f:
+    1093:                         f.write('\n'.join(locals()[name]) + '\n')
+    1094: 
+    1095:     def install_wheel(self, wheel_path, tmpdir):
+    1096:         wheel = Wheel(wheel_path)",,
+SP-039,joblib/joblib (b90f10ef),joblib/testing.py,46,CWE-78,Subprocess invocation audited for possible command execution risks.,"      39: def check_subprocess_call(cmd, timeout=5, stdout_regex=None,
+      40:                           stderr_regex=None):
+      41:     """"""Runs a command in a subprocess with timeout in seconds.
+      42: 
+      43:     Also checks returncode is zero, stdout if stdout_regex is set, and
+      44:     stderr if stderr_regex is set.
+      45:     """"""
+>>>   46:     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+      47:                             stderr=subprocess.PIPE)
+      48: 
+      49:     def kill_process():
+      50:         warnings.warn(""Timeout running {}"".format(cmd))
+      51:         proc.kill()
+      52: 
+      53:     timer = threading.Timer(timeout, kill_process)",,
+SP-040,pypa/setuptools (88807c70),setuptools/sandbox.py,109,CWE-502,,"     102:     @staticmethod
+     103:     def dump(type, exc):
+     104:         """"""
+     105:         Always return a dumped (pickled) type and exc. If exc can't be pickled,
+     106:         wrap it in UnpickleableException first.
+     107:         """"""
+     108:         try:
+>>>  109:             return pickle.dumps(type), pickle.dumps(exc)
+     110:         except Exception:
+     111:             # get UnpickleableException inside the sandbox
+     112:             from setuptools.sandbox import UnpickleableException as cls
+     113: 
+     114:             return cls.dump(cls, cls(repr(exc)))
+     115: 
+     116: ",,
+SP-041,pypa/setuptools (88807c70),setuptools/command/egg_info.py,310,CWE-89,Constructing raw SQL queries via f-string formatting invites SQL injection attacks.,"     303:             os.unlink(filename)
+     304: 
+     305:     def run(self):
+     306:         self.mkpath(self.egg_info)
+     307:         try:
+     308:             os.utime(self.egg_info, None)
+     309:         except OSError as e:
+>>>  310:             msg = f""Cannot update time stamp of directory '{self.egg_info}'""
+     311:             raise distutils.errors.DistutilsFileError(msg) from e
+     312:         for ep in metadata.entry_points(group='egg_info.writers'):
+     313:             writer = ep.load()
+     314:             writer(self, ep.name, os.path.join(self.egg_info, ep.name))
+     315: 
+     316:         # Get rid of native_libs.txt if it was put there by older bdist_egg
+     317:         nl = os.path.join(self.egg_info, ""native_libs.txt"")",,
+SP-042,pypa/setuptools (88807c70),setuptools/_distutils/util.py,452,CWE-78,,"     445:              prefix={prefix!r}, base_dir={base_dir!r},
+     446:              verbose={verbose!r}, dry_run=0,
+     447:              direct=1)
+     448: """"""
+     449:                 )
+     450: 
+     451:         cmd = [sys.executable]
+>>>  452:         cmd.extend(subprocess._optim_args_from_interpreter_flags())
+     453:         cmd.append(script_name)
+     454:         spawn(cmd, dry_run=dry_run)
+     455:         execute(os.remove, (script_name,), ""removing %s"" % script_name, dry_run=dry_run)
+     456: 
+     457:     # ""Direct"" byte-compilation: use the py_compile module to compile
+     458:     # right here, right now.  Note that the script generated in indirect
+     459:     # mode simply calls 'byte_compile()' in direct mode, a weird sort of",,
+SP-043,pypa/setuptools (88807c70),pkg_resources/__init__.py,2255,CWE-706,,"    2248:     elif not hasattr(module, '__path__'):
+    2249:         raise TypeError(""Not a package:"", packageName)
+    2250:     handler = _find_adapter(_namespace_handlers, importer)
+    2251:     subpath = handler(importer, path_item, packageName, module)
+    2252:     if subpath is not None:
+    2253:         path = module.__path__
+    2254:         path.append(subpath)
+>>> 2255:         importlib.import_module(packageName)
+    2256:         _rebuild_mod_path(path, packageName, module)
+    2257:     return subpath
+    2258: 
+    2259: 
+    2260: def _rebuild_mod_path(orig_path, package_name, module):
+    2261:     """"""
+    2262:     Rebuild module.__path__ ensuring that all entries are ordered",,
+SP-044,pypa/setuptools (88807c70),setuptools/_vendor/more_itertools/more.py,3292,CWE-327,Standard random module PRNG is predictable and unsuitable for security/cryptographic purposes.,"    3285: 
+    3286:     # Generate random number that's the largest in a sample of k U(0,1) numbers
+    3287:     # Largest order statistic: https://en.wikipedia.org/wiki/Order_statistic
+    3288:     W = exp(log(random()) / k)
+    3289: 
+    3290:     # The number of elements to skip before changing the reservoir is a random
+    3291:     # number with a geometric distribution. Sample it using random() and logs.
+>>> 3292:     next_index = k + floor(log(random()) / log(1 - W))
+    3293: 
+    3294:     for index, element in enumerate(iterable, k):
+    3295: 
+    3296:         if index == next_index:
+    3297:             reservoir[randrange(k)] = element
+    3298:             # The new W is the largest in a sample of k U(0, `old_W`) numbers
+    3299:             W *= exp(log(random()) / k)",,
+SP-045,joblib/joblib (b90f10ef),joblib/numpy_pickle_utils.py,7,CWE-502,Consider possible security implications associated with pickle module.,"       1: """"""Utilities for fast persistence of big data, with optional compression.""""""
+       2: 
+       3: # Author: Gael Varoquaux <gael dot varoquaux at normalesup dot org>
+       4: # Copyright (c) 2009 Gael Varoquaux
+       5: # License: BSD Style, 3 clauses.
+       6: 
+>>>    7: import pickle
+       8: import io
+       9: import sys
+      10: import warnings
+      11: import contextlib
+      12: 
+      13: from .compressor import _ZFILE_PREFIX
+      14: from .compressor import _COMPRESSORS",,
+SP-046,pypa/setuptools (88807c70),pkg_resources/_vendor/more_itertools/recipes.py,637,CWE-330,Standard pseudo-random generators are not suitable for security/cryptographic purposes.,"     630: 
+     631:     This equivalent to taking a random selection from
+     632:     ``itertools.combinations(iterable, r)``.
+     633: 
+     634:     """"""
+     635:     pool = tuple(iterable)
+     636:     n = len(pool)
+>>>  637:     indices = sorted(sample(range(n), r))
+     638:     return tuple(pool[i] for i in indices)
+     639: 
+     640: 
+     641: def random_combination_with_replacement(iterable, r):
+     642:     """"""Return a random *r* length subsequence of elements in *iterable*,
+     643:     allowing individual elements to be repeated.
+     644: ",,
+SP-047,joblib/joblib (b90f10ef),joblib/externals/loky/backend/utils.py,80,CWE-78,Starting a process with a partial executable path,"      73:     process.join()
+      74: 
+      75: 
+      76: def _windows_taskkill_process_tree(pid):
+      77:     # On windows, the taskkill function with option `/T` terminate a given
+      78:     # process pid and its children.
+      79:     try:
+>>>   80:         subprocess.check_output(
+      81:             [""taskkill"", ""/F"", ""/T"", ""/PID"", str(pid)], stderr=None
+      82:         )
+      83:     except subprocess.CalledProcessError as e:
+      84:         # In Windows, taskkill returns 128, 255 for no process found.
+      85:         if e.returncode not in [128, 255]:
+      86:             # Let's raise to let the caller log the error details in a
+      87:             # warning and only kill the root process.",,
+SP-048,pypa/setuptools (88807c70),pkg_resources/_vendor/packaging/_musllinux.py,50,CWE-78,subprocess call - check for execution of untrusted input.,"      43:     try:
+      44:         with open(executable, ""rb"") as f:
+      45:             ld = ELFFile(f).interpreter
+      46:     except (OSError, TypeError, ValueError):
+      47:         return None
+      48:     if ld is None or ""musl"" not in ld:
+      49:         return None
+>>>   50:     proc = subprocess.run([ld], stderr=subprocess.PIPE, text=True)
+      51:     return _parse_musl_version(proc.stderr)
+      52: 
+      53: 
+      54: def platform_tags(archs: Sequence[str]) -> Iterator[str]:
+      55:     """"""Generate musllinux tags compatible to the current platform.
+      56: 
+      57:     :param archs: Sequence of compatible architectures.",,
+SP-049,pypa/setuptools (88807c70),setuptools/_distutils/util.py,415,CWE-377,Call to deprecated function tempfile.mktemp may be insecure.,"     408:         try:
+     409:             from tempfile import mkstemp
+     410: 
+     411:             (script_fd, script_name) = mkstemp("".py"")
+     412:         except ImportError:
+     413:             from tempfile import mktemp
+     414: 
+>>>  415:             (script_fd, script_name) = None, mktemp("".py"")
+     416:         log.info(""writing byte-compilation script '%s'"", script_name)
+     417:         if not dry_run:
+     418:             if script_fd is not None:
+     419:                 script = os.fdopen(script_fd, ""w"", encoding='utf-8')
+     420:             else:  # pragma: no cover
+     421:                 script = open(script_name, ""w"", encoding='utf-8')
+     422: ",,
+SP-050,joblib/joblib (b90f10ef),joblib/_memmapping_reducer.py,313,CWE-502,,"     306:         # a is either a regular (not memmap-backed) numpy array, or an array
+     307:         # backed by a shared temporary file created by joblib. In the latter
+     308:         # case, in order to limit the lifespan of these temporary files, we
+     309:         # serialize the memmap as a regular numpy array, and decref the
+     310:         # file backing the memmap (done implicitly in a previously registered
+     311:         # finalizer, see ``unlink_on_gc_collect`` for more details)
+     312:         return (
+>>>  313:             loads, (dumps(np.asarray(a), protocol=HIGHEST_PROTOCOL), )
+     314:         )
+     315: 
+     316: 
+     317: class ArrayMemmapForwardReducer(object):
+     318:     """"""Reducer callable to dump large arrays to memmap files.
+     319: 
+     320:     Parameters",,
+SP-051,pypa/setuptools (88807c70),setuptools/_distutils/_msvccompiler.py,83,CWE-78,Subprocess invocation audited for possible command execution risks.,"      76:     installed.
+      77:     """"""
+      78:     root = os.environ.get(""ProgramFiles(x86)"") or os.environ.get(""ProgramFiles"")
+      79:     if not root:
+      80:         return None, None
+      81: 
+      82:     try:
+>>>   83:         path = subprocess.check_output(
+      84:             [
+      85:                 os.path.join(
+      86:                     root, ""Microsoft Visual Studio"", ""Installer"", ""vswhere.exe""
+      87:                 ),
+      88:                 ""-latest"",
+      89:                 ""-prerelease"",
+      90:                 ""-requires"",",,
+SP-052,pypa/setuptools (88807c70),setuptools/_distutils/command/bdist_rpm.py,7,CWE-78,Consider possible security implications associated with the subprocess module.,"       1: """"""distutils.command.bdist_rpm
+       2: 
+       3: Implements the Distutils 'bdist_rpm' command (create RPM source and binary
+       4: distributions).""""""
+       5: 
+       6: import os
+>>>    7: import subprocess
+       8: import sys
+       9: from distutils._log import log
+      10: 
+      11: from ..core import Command
+      12: from ..debug import DEBUG
+      13: from ..errors import (
+      14:     DistutilsExecError,",,
+SP-053,pypa/setuptools (88807c70),setuptools/_vendor/importlib_metadata/__init__.py,208,CWE-706,,"     201: 
+     202:     def load(self):
+     203:         """"""Load the entry point from its definition. If only a module
+     204:         is indicated by the value, return that module. Otherwise,
+     205:         return the named object.
+     206:         """"""
+     207:         match = self.pattern.match(self.value)
+>>>  208:         module = import_module(match.group('module'))
+     209:         attrs = filter(None, (match.group('attr') or '').split('.'))
+     210:         return functools.reduce(getattr, attrs, module)
+     211: 
+     212:     @property
+     213:     def module(self):
+     214:         match = self.pattern.match(self.value)
+     215:         return match.group('module')",,
+SP-054,aio-libs/aiohttp (1c335944),aiohttp/cookiejar.py,113,CWE-502,"pickle deserializes untrusted data into arbitrary Python objects, allowing remote code execution.","     106:         file_path = pathlib.Path(file_path)
+     107:         with file_path.open(mode=""wb"") as f:
+     108:             pickle.dump(self._cookies, f, pickle.HIGHEST_PROTOCOL)
+     109: 
+     110:     def load(self, file_path: PathLike) -> None:
+     111:         file_path = pathlib.Path(file_path)
+     112:         with file_path.open(mode=""rb"") as f:
+>>>  113:             self._cookies = pickle.load(f)
+     114: 
+     115:     def clear(self, predicate: Optional[ClearCookiePredicate] = None) -> None:
+     116:         if predicate is None:
+     117:             self._next_expiration = ceil(time.time())
+     118:             self._cookies.clear()
+     119:             self._host_only_cookies.clear()
+     120:             self._expirations.clear()",,
+SP-055,joblib/joblib (b90f10ef),benchmarks/bench_compression.py,232,CWE-377,Probable insecure usage of temp file/directory.,"     225:     (""cPickle"", (Pickler, Unpickler)),
+     226:     # Joblib Pickler/Unpickler designed for numpy arrays.
+     227:     (""Joblib"", (NumpyPickler, NumpyUnpickler)), ])
+     228: 
+     229: # The list of supported compressors used for testing
+     230: compressors = OrderedDict([
+     231:     (""No"", (open, '/tmp/test_raw', 'wb', {})),
+>>>  232:     (""Zlib"", (BinaryZlibFile, '/tmp/test_zlib', 'wb', {'compresslevel': 3})),
+     233:     (""Gzip"", (BinaryGzipFile, '/tmp/test_gzip', 'wb', {'compresslevel': 3})),
+     234:     (""Bz2"", (bz2.BZ2File, '/tmp/test_bz2', 'wb', {'compresslevel': 3})),
+     235:     (""Xz"", (lzma.LZMAFile, '/tmp/test_xz', 'wb',
+     236:                            {'preset': 3, 'check': lzma.CHECK_NONE})),
+     237:     (""Lzma"", (lzma.LZMAFile, '/tmp/test_lzma', 'wb',
+     238:                              {'preset': 3, 'format': lzma.FORMAT_ALONE})), ])
+     239: ",,
+SP-056,pypa/setuptools (88807c70),setuptools/_distutils/core.py,266,CWE-78,Use of exec detected.,"     259:         try:
+     260:             sys.argv[0] = script_name
+     261:             if script_args is not None:
+     262:                 sys.argv[1:] = script_args
+     263:             # tokenize.open supports automatic encoding detection
+     264:             with tokenize.open(script_name) as f:
+     265:                 code = f.read().replace(r'\r\n', r'\n')
+>>>  266:                 exec(code, g)
+     267:         finally:
+     268:             sys.argv = save_argv
+     269:             _setup_stop_after = None
+     270:     except SystemExit:
+     271:         # Hmm, should we do something if exiting with a non-zero code
+     272:         # (ie. error)?
+     273:         pass",,
+SP-057,pypa/setuptools (88807c70),pkg_resources/__init__.py,1529,CWE-78,Use of exec detected.,"    1522:         script_text = self.get_metadata(script).replace('\r\n', '\n')
+    1523:         script_text = script_text.replace('\r', '\n')
+    1524:         script_filename = self._fn(self.egg_info, script)
+    1525:         namespace['__file__'] = script_filename
+    1526:         if os.path.exists(script_filename):
+    1527:             source = _read_utf8_with_fallback(script_filename)
+    1528:             code = compile(source, script_filename, 'exec')
+>>> 1529:             exec(code, namespace, namespace)
+    1530:         else:
+    1531:             from linecache import cache
+    1532: 
+    1533:             cache[script_filename] = (
+    1534:                 len(script_text),
+    1535:                 0,
+    1536:                 script_text.split('\n'),",,
+SP-058,pypa/setuptools (88807c70),pkg_resources/_vendor/more_itertools/more.py,3535,CWE-327,Standard random module PRNG is predictable and unsuitable for security/cryptographic purposes.,"    3528:             # the weight-keys in log-space for better numerical stability.
+    3529:             smallest_weight_key, _ = reservoir[0]
+    3530:             t_w = exp(weight * smallest_weight_key)
+    3531:             r_2 = uniform(t_w, 1)  # generate U(t_w, 1)
+    3532:             weight_key = log(r_2) / weight
+    3533:             heapreplace(reservoir, (weight_key, element))
+    3534:             smallest_weight_key, _ = reservoir[0]
+>>> 3535:             weights_to_skip = log(random()) / smallest_weight_key
+    3536:         else:
+    3537:             weights_to_skip -= weight
+    3538: 
+    3539:     # Equivalent to [element for weight_key, element in sorted(reservoir)]
+    3540:     return [heappop(reservoir)[1] for _ in range(k)]
+    3541: 
+    3542: ",,
+SP-059,pypa/setuptools (88807c70),exercises.py,6,CWE-78,,"       1: def measure_startup_perf():
+       2:     # run by pytest_perf
+       3:     import subprocess
+       4:     import sys  # end warmup
+       5: 
+>>>    6:     subprocess.check_call([sys.executable, '-c', 'pass'])",,
+SP-060,pypa/setuptools (88807c70),setuptools/_distutils/command/register.py,99,CWE-699,"urlopen allows unexpected schemes (e.g., file://) if not restricted to http/https.","      92:             if self.repository == 'pypi':
+      93:                 self.repository = self.DEFAULT_REPOSITORY
+      94:             self.has_config = False
+      95: 
+      96:     def classifiers(self):
+      97:         """"""Fetch the list of classifiers from the server.""""""
+      98:         url = self.repository + '?:action=list_classifiers'
+>>>   99:         response = urllib.request.urlopen(url)
+     100:         log.info(self._read_pypi_response(response))
+     101: 
+     102:     def verify_metadata(self):
+     103:         """"""Send the metadata to the package index server to be checked.""""""
+     104:         # send the info to the server and report the result
+     105:         (code, result) = self.post_to_server(self.build_post_data('verify'))
+     106:         log.info('Server response (%s): %s', code, result)",,
+SP-061,pypa/setuptools (88807c70),setuptools/_distutils/command/register.py,99,CWE-939,,"      92:             if self.repository == 'pypi':
+      93:                 self.repository = self.DEFAULT_REPOSITORY
+      94:             self.has_config = False
+      95: 
+      96:     def classifiers(self):
+      97:         """"""Fetch the list of classifiers from the server.""""""
+      98:         url = self.repository + '?:action=list_classifiers'
+>>>   99:         response = urllib.request.urlopen(url)
+     100:         log.info(self._read_pypi_response(response))
+     101: 
+     102:     def verify_metadata(self):
+     103:         """"""Send the metadata to the package index server to be checked.""""""
+     104:         # send the info to the server and report the result
+     105:         (code, result) = self.post_to_server(self.build_post_data('verify'))
+     106:         log.info('Server response (%s): %s', code, result)",,
+SP-062,pypa/setuptools (88807c70),setuptools/depends.py,114,CWE-502,Deserialization with the marshal module is possibly dangerous.,"     107:     except ImportError:
+     108:         # Module doesn't exist
+     109:         return None
+     110: 
+     111:     with maybe_close(f):
+     112:         if kind == PY_COMPILED:
+     113:             f.read(8)  # skip magic & date
+>>>  114:             code = marshal.load(f)
+     115:         elif kind == PY_FROZEN:
+     116:             code = _imp.get_frozen_object(module, paths)
+     117:         elif kind == PY_SOURCE:
+     118:             code = compile(f.read(), path, 'exec')
+     119:         else:
+     120:             # Not something we can parse; we'll have to import it.  :(
+     121:             imported = _imp.get_module(module, paths, info)",,
+SP-063,pypa/setuptools (88807c70),pkg_resources/_vendor/jaraco/functools/__init__.py,522,CWE-95,,"     515:     def decorate(func):
+     516:         @functools.wraps(func)
+     517:         def wrapper(*args, **kwargs):
+     518:             try:
+     519:                 return func(*args, **kwargs)
+     520:             except exceptions:
+     521:                 try:
+>>>  522:                     return eval(use)
+     523:                 except TypeError:
+     524:                     return replace
+     525: 
+     526:         return wrapper
+     527: 
+     528:     return decorate
+     529: ",,
+SP-064,pypa/setuptools (88807c70),setuptools/_vendor/packaging/_musllinux.py,50,CWE-78,,"      43:     try:
+      44:         with open(executable, ""rb"") as f:
+      45:             ld = ELFFile(f).interpreter
+      46:     except (OSError, TypeError, ValueError):
+      47:         return None
+      48:     if ld is None or ""musl"" not in ld:
+      49:         return None
+>>>   50:     proc = subprocess.run([ld], stderr=subprocess.PIPE, text=True)
+      51:     return _parse_musl_version(proc.stderr)
+      52: 
+      53: 
+      54: def platform_tags(archs: Sequence[str]) -> Iterator[str]:
+      55:     """"""Generate musllinux tags compatible to the current platform.
+      56: 
+      57:     :param archs: Sequence of compatible architectures.",,
+SP-065,pypa/setuptools (88807c70),setuptools/config/_validate_pyproject/formats.py,123,CWE-939,,"     116: def _download_classifiers() -> str:
+     117:     import ssl
+     118:     from email.message import Message
+     119:     from urllib.request import urlopen
+     120: 
+     121:     url = ""https://pypi.org/pypi?:action=list_classifiers""
+     122:     context = ssl.create_default_context()
+>>>  123:     with urlopen(url, context=context) as response:
+     124:         headers = Message()
+     125:         headers[""content_type""] = response.getheader(""content-type"", ""text/plain"")
+     126:         return response.read().decode(headers.get_param(""charset"", ""utf-8""))
+     127: 
+     128: 
+     129: class _TroveClassifier:
+     130:     """"""The ``trove_classifiers`` package is the official way of validating classifiers,",,
+SP-066,pypa/setuptools (88807c70),setuptools/_vendor/packaging/tags.py,418,CWE-78,subprocess call - check for execution of untrusted input.,"     411:     """"""
+     412:     version_str, _, cpu_arch = platform.mac_ver()
+     413:     if version is None:
+     414:         version = cast(""MacVersion"", tuple(map(int, version_str.split(""."")[:2])))
+     415:         if version == (10, 16):
+     416:             # When built against an older macOS SDK, Python will report macOS 10.16
+     417:             # instead of the real version.
+>>>  418:             version_str = subprocess.run(
+     419:                 [
+     420:                     sys.executable,
+     421:                     ""-sS"",
+     422:                     ""-c"",
+     423:                     ""import platform; print(platform.mac_ver()[0])"",
+     424:                 ],
+     425:                 check=True,",,
+SP-067,pypa/setuptools (88807c70),pkg_resources/_vendor/jaraco/text/__init__.py,402,CWE-116,Comments ending with --> are matched differently from comments ending with --!>. The first is matched with capture group 1 and comments ending with --!> are matched with capture group 2.,"     395:     >>> print(simple_html_strip('Somebody <!-- do not --> tell the truth.'))
+     396:     Somebody  tell the truth.
+     397: 
+     398:     >>> print(simple_html_strip('What about<br/>\nmultiple lines?'))
+     399:     What about
+     400:     multiple lines?
+     401:     """"""
+>>>  402:     html_stripper = re.compile('(<!--.*?-->)|(<[^>]*>)|([^<]+)', re.DOTALL)
+     403:     texts = (match.group(3) or '' for match in html_stripper.finditer(s))
+     404:     return ''.join(texts)
+     405: 
+     406: 
+     407: class SeparatedValues(str):
+     408:     """"""
+     409:     A string separated by a separator. Overrides __iter__ for getting",,
+SP-068,pypa/setuptools (88807c70),pkg_resources/_vendor/packaging/_musllinux.py,9,CWE-78,Consider possible security implications associated with the subprocess module.,"       2: 
+       3: This module implements logic to detect if the currently running Python is
+       4: linked against musl, and what musl version is used.
+       5: """"""
+       6: 
+       7: import functools
+       8: import re
+>>>    9: import subprocess
+      10: import sys
+      11: from typing import Iterator, NamedTuple, Optional, Sequence
+      12: 
+      13: from ._elffile import ELFFile
+      14: 
+      15: 
+      16: class _MuslVersion(NamedTuple):",,
+SP-069,pypa/setuptools (88807c70),setuptools/_distutils/command/bdist_rpm.py,424,CWE-78,Starting a process with a partial executable path,"     417:             '%define release ' + self.release.replace('-', '_'),
+     418:             '',
+     419:             'Summary: ' + (self.distribution.get_description() or ""UNKNOWN""),
+     420:         ]
+     421: 
+     422:         # Workaround for #14443 which affects some RPM based systems such as
+     423:         # RHEL6 (and probably derivatives)
+>>>  424:         vendor_hook = subprocess.getoutput('rpm --eval %{__os_install_post}')
+     425:         # Generate a potential replacement value for __os_install_post (whilst
+     426:         # normalizing the whitespace to simplify the test for whether the
+     427:         # invocation of brp-python-bytecompile passes in __python):
+     428:         vendor_hook = '\n'.join([
+     429:             '  %s \\' % line.strip() for line in vendor_hook.splitlines()
+     430:         ])
+     431:         problem = ""brp-python-bytecompile \\\n""",,
+SP-070,pypa/setuptools (88807c70),setuptools/_vendor/more_itertools/recipes.py,542,CWE-327,Standard random module PRNG is predictable and unsuitable for security/cryptographic purposes.,"     535: 
+     536:     This equivalent to taking a random selection from
+     537:     ``itertools.combinations_with_replacement(iterable, r)``.
+     538: 
+     539:     """"""
+     540:     pool = tuple(iterable)
+     541:     n = len(pool)
+>>>  542:     indices = sorted(randrange(n) for i in range(r))
+     543:     return tuple(pool[i] for i in indices)
+     544: 
+     545: 
+     546: def nth_combination(iterable, r, index):
+     547:     """"""Equivalent to ``list(combinations(iterable, r))[index]``.
+     548: 
+     549:     The subsequences of *iterable* that are of length *r* can be ordered",,
+SP-071,pypa/setuptools (88807c70),setuptools/_distutils/spawn.py,57,CWE-78,subprocess call - check for execution of untrusted input.,"      50:         from distutils.util import MACOSX_VERSION_VAR, get_macosx_target_ver
+      51: 
+      52:         macosx_target_ver = get_macosx_target_ver()
+      53:         if macosx_target_ver:
+      54:             env[MACOSX_VERSION_VAR] = macosx_target_ver
+      55: 
+      56:     try:
+>>>   57:         proc = subprocess.Popen(cmd, env=env)
+      58:         proc.wait()
+      59:         exitcode = proc.returncode
+      60:     except OSError as exc:
+      61:         if not DEBUG:
+      62:             cmd = cmd[0]
+      63:         raise DistutilsExecError(f""command {cmd!r} failed: {exc.args[-1]}"") from exc
+      64: ",,
+SP-072,joblib/joblib (b90f10ef),joblib/externals/loky/backend/fork_exec.py,40,CWE-78,,"      33:     # copy the environment variables to set in the child process
+      34:     env = env or {}
+      35:     child_env = {**os.environ, **env}
+      36: 
+      37:     pid = os.fork()
+      38:     if pid == 0:  # pragma: no cover
+      39:         close_fds(keep_fds)
+>>>   40:         os.execve(sys.executable, cmd, child_env)
+      41:     else:
+      42:         return pid",,
+SP-073,joblib/joblib (b90f10ef),joblib/_deprecated_format_stack.py,288,CWE-95,Using eval() allows arbitrary code execution if untrusted input is passed.,"     281:         # Start loop over vars
+     282:         lvals = []
+     283:         for name_full in unique_names:
+     284:             name_base = name_full.split('.', 1)[0]
+     285:             if name_base in frame.f_code.co_varnames:
+     286:                 if name_base in locals.keys():
+     287:                     try:
+>>>  288:                         value = safe_repr(eval(name_full, locals))
+     289:                     except:
+     290:                         value = ""undefined""
+     291:                 else:
+     292:                     value = ""undefined""
+     293:                 name = name_full
+     294:                 lvals.append('%s = %s' % (name, value))
+     295:             #elif print_globals:",,
+SP-074,pypa/setuptools (88807c70),pkg_resources/_vendor/more_itertools/recipes.py,622,CWE-330,Standard pseudo-random generators are not suitable for security/cryptographic purposes.,"     615: 
+     616:     This equivalent to taking a random selection from
+     617:     ``itertools.permutations(iterable, r)``.
+     618: 
+     619:     """"""
+     620:     pool = tuple(iterable)
+     621:     r = len(pool) if r is None else r
+>>>  622:     return tuple(sample(pool, r))
+     623: 
+     624: 
+     625: def random_combination(iterable, r):
+     626:     """"""Return a random *r* length subsequence of the elements in *iterable*.
+     627: 
+     628:         >>> random_combination(range(5), 3)  # doctest:+SKIP
+     629:         (2, 3, 4)",,
+SP-075,pypa/setuptools (88807c70),setuptools/command/easy_install.py,1093,CWE-96,,"    1086:         )  # write zip-safety flag
+    1087: 
+    1088:         for name in 'top_level', 'native_libs':
+    1089:             if locals()[name]:
+    1090:                 txt = os.path.join(egg_tmp, 'EGG-INFO', name + '.txt')
+    1091:                 if not os.path.exists(txt):
+    1092:                     with open(txt, 'w', encoding=""utf-8"") as f:
+>>> 1093:                         f.write('\n'.join(locals()[name]) + '\n')
+    1094: 
+    1095:     def install_wheel(self, wheel_path, tmpdir):
+    1096:         wheel = Wheel(wheel_path)
+    1097:         assert wheel.is_compatible()
+    1098:         destination = os.path.join(self.install_dir, wheel.egg_name())
+    1099:         destination = os.path.abspath(destination)
+    1100:         if not self.dry_run:",,
+SP-076,joblib/joblib (b90f10ef),joblib/hashing.py,10,CWE-502,Consider possible security implications associated with pickle module.,"       3: hashing of numpy arrays.
+       4: """"""
+       5: 
+       6: # Author: Gael Varoquaux <gael dot varoquaux at normalesup dot org>
+       7: # Copyright (c) 2009 Gael Varoquaux
+       8: # License: BSD Style, 3 clauses.
+       9: 
+>>>   10: import pickle
+      11: import hashlib
+      12: import sys
+      13: import types
+      14: import struct
+      15: import io
+      16: import decimal
+      17: ",,
+SP-077,pypa/setuptools (88807c70),setuptools/_distutils/cygwinccompiler.py,347,CWE-78,Subprocess invocation audited for possible command execution risks.,"     340:         return code, f""{fn!r} {mention_inflected} {substring!r}""
+     341:     except OSError as exc:
+     342:         return (CONFIG_H_UNCERTAIN, f""couldn't read '{fn}': {exc.strerror}"")
+     343: 
+     344: 
+     345: def is_cygwincc(cc):
+     346:     """"""Try to determine if the compiler that would be used is from cygwin.""""""
+>>>  347:     out_string = check_output(shlex.split(cc) + ['-dumpmachine'])
+     348:     return out_string.strip().endswith(b'cygwin')
+     349: 
+     350: 
+     351: get_versions = None
+     352: """"""
+     353: A stand-in for the previous get_versions() function to prevent failures
+     354: when monkeypatched. See pypa/setuptools#2969.",,
+SP-078,pypa/setuptools (88807c70),pkg_resources/_vendor/more_itertools/recipes.py,604,CWE-330,Standard pseudo-random generators are not suitable for security/cryptographic purposes.,"     597:         ('a', 2, 'd', 3)
+     598: 
+     599:     This equivalent to taking a random selection from
+     600:     ``itertools.product(*args, **kwarg)``.
+     601: 
+     602:     """"""
+     603:     pools = [tuple(pool) for pool in args] * repeat
+>>>  604:     return tuple(choice(pool) for pool in pools)
+     605: 
+     606: 
+     607: def random_permutation(iterable, r=None):
+     608:     """"""Return a random *r* length permutation of the elements in *iterable*.
+     609: 
+     610:     If *r* is not specified or is ``None``, then *r* defaults to the length of
+     611:     *iterable*.",,
+SP-079,pypa/setuptools (88807c70),setuptools/msvc.py,190,CWE-78,subprocess call - check for execution of untrusted input.,"     183:         return {key.lower(): value for key, value in environ.items()}
+     184: 
+     185:     vcvarsall, vcruntime = _msvc14_find_vcvarsall(plat_spec)
+     186:     if not vcvarsall:
+     187:         raise distutils.errors.DistutilsPlatformError(""Unable to find vcvarsall.bat"")
+     188: 
+     189:     try:
+>>>  190:         out = subprocess.check_output(
+     191:             'cmd /u /c ""{}"" {} && set'.format(vcvarsall, plat_spec),
+     192:             stderr=subprocess.STDOUT,
+     193:         ).decode('utf-16le', errors='replace')
+     194:     except subprocess.CalledProcessError as exc:
+     195:         raise distutils.errors.DistutilsPlatformError(
+     196:             ""Error executing {}"".format(exc.cmd)
+     197:         ) from exc",,
+SP-080,pypa/setuptools (88807c70),setuptools/config/_validate_pyproject/formats.py,47,CWE-1333,,"      40:             [-_\.]?
+      41:             (?P<dev_n>[0-9]+)?
+      42:         )?
+      43:     )
+      44:     (?:\+(?P<local>[a-z0-9]+(?:[-_\.][a-z0-9]+)*))?       # local version
+      45: """"""
+      46: 
+>>>   47: VERSION_REGEX = re.compile(r""^\s*"" + VERSION_PATTERN + r""\s*$"", re.X | re.I)
+      48: 
+      49: 
+      50: def pep440(version: str) -> bool:
+      51:     return VERSION_REGEX.match(version) is not None
+      52: 
+      53: 
+      54: # -------------------------------------------------------------------------------------",,
+SP-081,joblib/joblib (b90f10ef),joblib/externals/loky/backend/context.py,193,CWE-78,,"     186:     global physical_cores_cache
+     187:     if physical_cores_cache is not None:
+     188:         return physical_cores_cache, exception
+     189: 
+     190:     # Not cached yet, find it
+     191:     try:
+     192:         if sys.platform == ""linux"":
+>>>  193:             cpu_info = subprocess.run(
+     194:                 ""lscpu --parse=core"".split(), capture_output=True, text=True)
+     195:             cpu_info = cpu_info.stdout.splitlines()
+     196:             cpu_info = {line for line in cpu_info if not line.startswith(""#"")}
+     197:             cpu_count_physical = len(cpu_info)
+     198:         elif sys.platform == ""win32"":
+     199:             cpu_info = subprocess.run(
+     200:                 ""wmic CPU Get NumberOfCores /Format:csv"".split(),",,
+SP-082,pypa/setuptools (88807c70),pkg_resources/_vendor/backports/tarfile.py,320,CWE-732,Overly permissive mask in open sets file to world writable.,"     313:     def __init__(self, name, mode):
+     314:         mode = {
+     315:             ""r"": os.O_RDONLY,
+     316:             ""w"": os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+     317:         }[mode]
+     318:         if hasattr(os, ""O_BINARY""):
+     319:             mode |= os.O_BINARY
+>>>  320:         self.fd = os.open(name, mode, 0o666)
+     321: 
+     322:     def close(self):
+     323:         os.close(self.fd)
+     324: 
+     325:     def read(self, size):
+     326:         return os.read(self.fd, size)
+     327: ",,

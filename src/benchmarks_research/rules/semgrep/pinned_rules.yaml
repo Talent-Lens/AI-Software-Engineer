@@ -1,0 +1,44 @@
+rules:
+  - id: python-sqli-formatted-string
+    pattern-either:
+      - pattern: $CURSOR.execute(f"...", ...)
+      - pattern: |
+          $Q = f"..."
+          ...
+          $CURSOR.execute($Q, ...)
+      - pattern: $CURSOR.execute("..." % (...), ...)
+      - pattern: $CURSOR.execute("...".format(...), ...)
+    message: "Potential SQL Injection detected via unparameterized query construction."
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021 - Injection"
+      severity: "ERROR"
+    severity: ERROR
+    languages: [python]
+
+  - id: python-hardcoded-secret-key
+    patterns:
+      - pattern: $VAR = "$SECRET"
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i)(.*secret.*|.*api_key.*|.*token.*)
+      - metavariable-regex:
+          metavariable: $SECRET
+          regex: (AKIA[0-9A-Z]{16,40}|[0-9a-zA-Z_-]{32,})
+    message: "Potential hardcoded secret or API credential token detected."
+    metadata:
+      cwe: "CWE-798"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      severity: "WARNING"
+    severity: WARNING
+    languages: [python]
+
+  - id: python-insecure-tempfile-mktemp
+    pattern: tempfile.mktemp(...)
+    message: "Use of insecure tempfile.mktemp() allows race conditions (TOCTOU). Use tempfile.NamedTemporaryFile() instead."
+    metadata:
+      cwe: "CWE-377"
+      owasp: "A01:2021 - Broken Access Control"
+      severity: "ERROR"
+    severity: ERROR
+    languages: [python]

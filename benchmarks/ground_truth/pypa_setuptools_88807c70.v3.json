@@ -1,0 +1,150 @@
+{
+  "schema_version": "v3",
+  "supersedes": "pypa_setuptools_88807c70.v2.json",
+  "revision_reason": "Reviewed all 10 hunks by code inspection: kept only the 2 security-relevant os.system() sink hunks (original GT-AUTO-007, GT-AUTO-010), marked 8 pure refactors/helpers/renames as noise, and set CWE-94 from GitHub Advisory GHSA-cx63-2mw6-8hw5 (CVE-2024-6345).",
+  "repo_name": "pypa/setuptools (88807c70)",
+  "url": "https://github.com/pypa/setuptools",
+  "cve_id": "CVE-2024-6345",
+  "advisory_id": "GHSA-cx63-2mw6-8hw5",
+  "cwe_source": "GitHub Advisory GHSA-cx63-2mw6-8hw5 (CVE-2024-6345)",
+  "pinned_vulnerable_sha": "4a0a9ce587515edce83ab97aa5c7943c045ac180",
+  "pinned_clean_sha": "88807c7062788254f654ea8c03427adc859321f0",
+  "language": "python",
+  "loc": 80512,
+  "description": "Auto-extracted benchmark for 88807c70 (v3: 2 security-relevant hunks, CWE-94 via GHSA-cx63-2mw6-8hw5)",
+  "label_quality": "provisional",
+  "labeled_findings": [
+    {
+      "id": "GT-AUTO-001",
+      "file": "setuptools/package_index.py",
+      "line_start": 872,
+      "line_end": 898,
+      "cwe": "CWE-94",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 88807c70. Changed 27 line(s) in setuptools/package_index.py.",
+      "deleted_lines": [
+        "        path = path.split('#', 1)[0]",
+        "",
+        "        rev = None",
+        "        if '@' in path:",
+        "            path, rev = path.rsplit('@', 1)",
+        "",
+        "        # Also, discard fragment",
+        "        url = urllib.parse.urlunsplit((scheme, netloc, path, query, ''))",
+        "",
+        "        return url, rev",
+        "",
+        "    def _download_git(self, url, filename):",
+        "        filename = filename.split('#', 1)[0]",
+        "        url, rev = self._vcs_split_rev_from_url(url, pop_prefix=True)",
+        "",
+        "        self.info(\"Doing git clone from %s to %s\", url, filename)",
+        "        os.system(\"git clone --quiet %s %s\" % (url, filename))",
+        "",
+        "        if rev is not None:",
+        "            self.info(\"Checking out %s\", rev)",
+        "            os.system(",
+        "                \"git -C %s checkout --quiet %s\"",
+        "                % (",
+        "                    filename,",
+        "                    rev,",
+        "                )",
+        "            )"
+      ],
+      "added_lines": [
+        "        no_fragment_path, _, _ = parts.path.partition('#')"
+      ]
+    },
+    {
+      "id": "GT-AUTO-002",
+      "file": "setuptools/package_index.py",
+      "line_start": 906,
+      "line_end": 919,
+      "cwe": "CWE-94",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 88807c70. Changed 14 line(s) in setuptools/package_index.py.",
+      "deleted_lines": [
+        "        self.info(\"Doing hg clone from %s to %s\", url, filename)",
+        "        os.system(\"hg clone --quiet %s %s\" % (url, filename))",
+        "",
+        "        if rev is not None:",
+        "            self.info(\"Updating to %s\", rev)",
+        "            os.system(",
+        "                \"hg --cwd %s up -C -r %s -q\"",
+        "                % (",
+        "                    filename,",
+        "                    rev,",
+        "                )",
+        "            )",
+        "",
+        "        return filename"
+      ],
+      "added_lines": [
+        "        return resolved, rev"
+      ]
+    }
+  ],
+  "ignored_noise_hunks": [
+    {
+      "original_id": "GT-AUTO-001",
+      "file": "setuptools/package_index.py",
+      "line_start": 590,
+      "line_end": 590,
+      "reason": "signature refactor: removed redundant scheme argument"
+    },
+    {
+      "original_id": "GT-AUTO-002",
+      "file": "setuptools/package_index.py",
+      "line_start": 819,
+      "line_end": 819,
+      "reason": "signature refactor: removed unused scheme parameter"
+    },
+    {
+      "original_id": "GT-AUTO-003",
+      "file": "setuptools/package_index.py",
+      "line_start": 834,
+      "line_end": 846,
+      "reason": "dispatch refactor: moved scheme branching to _download_vcs/_download_other"
+    },
+    {
+      "original_id": "GT-AUTO-004",
+      "file": "setuptools/package_index.py",
+      "line_start": 862,
+      "line_end": 864,
+      "reason": "helper removal: _download_svn unconditionally raised DistutilsError"
+    },
+    {
+      "original_id": "GT-AUTO-005",
+      "file": "setuptools/package_index.py",
+      "line_start": 866,
+      "line_end": 867,
+      "reason": "helper refactor: simplified _vcs_split_rev_from_url signature and added docstring"
+    },
+    {
+      "original_id": "GT-AUTO-006",
+      "file": "setuptools/package_index.py",
+      "line_start": 869,
+      "line_end": 869,
+      "reason": "variable rename: scheme -> clean_scheme"
+    },
+    {
+      "original_id": "GT-AUTO-008",
+      "file": "setuptools/package_index.py",
+      "line_start": 900,
+      "line_end": 900,
+      "reason": "helper return / diff alignment artifact"
+    },
+    {
+      "original_id": "GT-AUTO-009",
+      "file": "setuptools/package_index.py",
+      "line_start": 902,
+      "line_end": 904,
+      "reason": "helper setup refactor: _download_hg argument cleanup"
+    }
+  ],
+  "clean_negative_regions": []
+}

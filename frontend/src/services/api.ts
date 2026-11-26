@@ -328,6 +328,213 @@ export async function runRepoBenchmark(
   return await res.json();
 }
 
+export async function fetchBenchmarkOverview(verifiedOnly: boolean = false): Promise<import('../types').BenchmarkOverviewResponse> {
+  const url = `${API_BASE_URL}/api/v1/benchmarks/overview${verifiedOnly ? '?verified_only=true' : ''}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch benchmark overview: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function fetchBenchmarkCapabilities(): Promise<import('../types').BenchmarkCapabilitiesResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/capabilities`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    return {
+      benchmark_mode: 'readonly',
+      readonly: true,
+      can_mutate: false,
+      can_run: false,
+      can_add: false,
+      can_recompute: false,
+      can_triage: false,
+      can_latency_pass: false,
+    };
+  }
+  return await res.json();
+}
+
+export async function fetchResearchRepos(): Promise<import('../types').ResearchRepoItem[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch research repositories: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function fetchResearchRepoDetail(repoId: string): Promise<import('../types').ResearchRepoDetailResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch repository benchmark detail: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function addResearchRepo(repoUrl: string, identifier: string, cwe?: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ repo_url: repoUrl, identifier, cwe: cwe?.trim() || null }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to add research repo: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function fetchBenchmarkRunPlan(repoId: string, forceRescan = false): Promise<any> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/run-plan?force_rescan=${forceRescan ? 'true' : 'false'}`,
+    { headers: getAuthHeaders() },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to fetch run plan: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function runResearchRepo(repoId: string, forceRescan = false): Promise<any> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/run?force_rescan=${forceRescan ? 'true' : 'false'}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to run research repo pipeline: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function retryResearchRepo(repoId: string, forceRescan = false): Promise<any> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/retry?force_rescan=${forceRescan ? 'true' : 'false'}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to retry research repo pipeline: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function recomputeResearchRepo(repoId: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/recompute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to recompute metrics: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function recomputeAllResearchRepos(): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/recompute-all`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to recompute all metrics: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function startLatencyPass(repoIds?: string[], repeats = 3): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/latency-pass`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ repo_ids: repoIds || null, repeats }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to start latency pass: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function fetchLatestLatencyPass(): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/latency-pass/latest`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to fetch latency pass: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function excludeResearchRepo(repoId: string, reason: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/exclude`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to exclude repository: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function unexcludeResearchRepo(repoId: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/unexclude`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to re-include repository: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function deleteResearchRepo(repoId: string, reason?: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ reason: reason || null }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to delete repository: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function exportBlindTriage(repoId: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/blind-triage`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to export blind triage: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function importVerifiedTriage(repoId: string, findings: any[]): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/verified-triage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ findings }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to import verified triage: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
 // ==========================================
 // AUTHENTICATION API SERVICES
 // ==========================================

@@ -40,6 +40,8 @@ htmlcov/
 scratch/
 test_repo/
 data/benchmark_cache/
+data/benchmark_bare_cache/
+tools/
 
 # Vector database & database files
 chroma_db/

@@ -28,6 +28,18 @@ async def lifespan(app: FastAPI):
         logger.info("Database schema verified and initialized.")
     except Exception as err:
         logger.error("Database initialization warning: %s", err)
+
+    try:
+        from src.db.session import SessionLocal
+        from src.benchmarks.read_service import BenchmarkReadService
+        db = SessionLocal()
+        try:
+            BenchmarkReadService(db).recover_orphaned_jobs_on_startup()
+        finally:
+            db.close()
+    except Exception as err:
+        logger.warning("Orphaned benchmark job recovery warning: %s", err)
+
     yield
     logger.info("Shutting down AI Software Engineer API Server...")
 
@@ -58,6 +70,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(TelemetryMiddleware)
+
+
+@app.middleware("http")
+async def benchmark_readonly_404_middleware(request, call_next):
+    response = await call_next(request)
+    if (
+        response.status_code == 405
+        and request.url.path.startswith("/api/v1/benchmarks")
+        and benchmark.get_benchmark_mode() != "research"
+    ):
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    return response
 
 # Include REST Routers under /api/v1
 app.include_router(health.router, prefix="/api/v1")

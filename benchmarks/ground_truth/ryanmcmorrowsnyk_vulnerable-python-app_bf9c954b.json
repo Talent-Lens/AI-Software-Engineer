@@ -1,0 +1,33 @@
+{
+  "repo_name": "ryanmcmorrowsnyk/vulnerable-python-app (bf9c954b)",
+  "url": "https://github.com/ryanmcmorrowsnyk/vulnerable-python-app",
+  "pinned_vulnerable_sha": "bf9c954b327a5ec872b7fd65642760b3837af531",
+  "pinned_clean_sha": null,
+  "repo_type": "intentionally_vulnerable",
+  "language": "python",
+  "loc": 296,
+  "label_quality": "verified",
+  "description": "Intentionally vulnerable Flask app with 19 documented SAST vulnerabilities in app.py.",
+  "labeled_findings": [
+    {"id": "VPA-001", "file": "app.py", "line_start": 24, "line_end": 27, "cwe": "CWE-798", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Hardcoded secrets (SECRET_KEY, JWT_SECRET, ADMIN_PASSWORD, DB_PASSWORD)"},
+    {"id": "VPA-002", "file": "app.py", "line_start": 69, "line_end": 84, "cwe": "CWE-89", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-readme-verified", "notes": "SQL Injection via f-string query"},
+    {"id": "VPA-003", "file": "app.py", "line_start": 86, "line_end": 95, "cwe": "CWE-78", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Command Injection via subprocess.check_output(..., shell=True)"},
+    {"id": "VPA-004", "file": "app.py", "line_start": 97, "line_end": 108, "cwe": "CWE-22", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Path Traversal in /api/files"},
+    {"id": "VPA-005", "file": "app.py", "line_start": 110, "line_end": 125, "cwe": "CWE-434", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Unrestricted File Upload"},
+    {"id": "VPA-006", "file": "app.py", "line_start": 127, "line_end": 132, "cwe": "CWE-79", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Reflected XSS in /api/search"},
+    {"id": "VPA-007", "file": "app.py", "line_start": 134, "line_end": 144, "cwe": "CWE-918", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "SSRF via requests.get(url)"},
+    {"id": "VPA-008", "file": "app.py", "line_start": 146, "line_end": 155, "cwe": "CWE-94", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-readme-verified", "notes": "RCE via eval(expression)"},
+    {"id": "VPA-009", "file": "app.py", "line_start": 157, "line_end": 166, "cwe": "CWE-502", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Insecure Deserialization via pickle.loads(data)"},
+    {"id": "VPA-010", "file": "app.py", "line_start": 168, "line_end": 174, "cwe": "CWE-862", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Missing Authentication on DELETE /api/admin/users/<id>"},
+    {"id": "VPA-011", "file": "app.py", "line_start": 176, "line_end": 184, "cwe": "CWE-639", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-readme-verified", "notes": "IDOR on GET /api/users/<id>"},
+    {"id": "VPA-012", "file": "app.py", "line_start": 186, "line_end": 195, "cwe": "CWE-611", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "XXE via xml.etree.ElementTree.fromstring"},
+    {"id": "VPA-013", "file": "app.py", "line_start": 197, "line_end": 206, "cwe": "CWE-502", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "YAML Deserialization via yaml.load"},
+    {"id": "VPA-014", "file": "app.py", "line_start": 208, "line_end": 217, "cwe": "CWE-915", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Mass Assignment via **request.json"},
+    {"id": "VPA-015", "file": "app.py", "line_start": 219, "line_end": 232, "cwe": "CWE-200", "severity": "HIGH", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Sensitive Data Exposure in /api/debug"},
+    {"id": "VPA-016", "file": "app.py", "line_start": 234, "line_end": 239, "cwe": "CWE-330", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Insecure Randomness via random.choices"},
+    {"id": "VPA-017", "file": "app.py", "line_start": 241, "line_end": 246, "cwe": "CWE-601", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Open Redirect via redirect(url)"},
+    {"id": "VPA-018", "file": "app.py", "line_start": 266, "line_end": 277, "cwe": "CWE-209", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Information Disclosure via traceback.format_exc()"},
+    {"id": "VPA-019", "file": "app.py", "line_start": 295, "line_end": 296, "cwe": "CWE-489", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-readme-verified", "notes": "Flask debug=True enabled"}
+  ],
+  "clean_negative_regions": []
+}

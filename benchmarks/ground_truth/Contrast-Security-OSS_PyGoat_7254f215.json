@@ -1,0 +1,25 @@
+{
+  "repo_name": "Contrast-Security-OSS/PyGoat (7254f215)",
+  "url": "https://github.com/Contrast-Security-OSS/PyGoat",
+  "pinned_vulnerable_sha": "7254f215fbff49bf61302c47b88fdadc7360c724",
+  "pinned_clean_sha": null,
+  "repo_type": "intentionally_vulnerable",
+  "language": "python",
+  "loc": 2800,
+  "label_quality": "verified",
+  "description": "PyGoat intentionally vulnerable Django application (OWASP challenges).",
+  "labeled_findings": [
+    {"id": "PYGOAT-001", "file": "introduction/views.py", "line_start": 157, "line_end": 161, "cwe": "CWE-89", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "SQL Injection via string concatenation + login.objects.raw(sql_query)"},
+    {"id": "PYGOAT-002", "file": "introduction/views.py", "line_start": 213, "line_end": 213, "cwe": "CWE-502", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "Insecure deserialization via pickle.loads(token)"},
+    {"id": "PYGOAT-003", "file": "introduction/views.py", "line_start": 250, "line_end": 258, "cwe": "CWE-611", "severity": "HIGH", "label": "vulnerable", "source": "repo-code-verified", "notes": "XXE via xml.dom.pulldom.parseString / sax parser"},
+    {"id": "PYGOAT-004", "file": "introduction/views.py", "line_start": 422, "line_end": 427, "cwe": "CWE-78", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "Command Injection via subprocess.Popen"},
+    {"id": "PYGOAT-005", "file": "introduction/views.py", "line_start": 453, "line_end": 453, "cwe": "CWE-94", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "Code Injection via eval(val)"},
+    {"id": "PYGOAT-006", "file": "introduction/views.py", "line_start": 553, "line_end": 553, "cwe": "CWE-502", "severity": "HIGH", "label": "vulnerable", "source": "repo-code-verified", "notes": "Unsafe YAML deserialization via yaml.load(file, yaml.Loader)"},
+    {"id": "PYGOAT-007", "file": "introduction/views.py", "line_start": 581, "line_end": 581, "cwe": "CWE-94", "severity": "HIGH", "label": "vulnerable", "source": "repo-code-verified", "notes": "Code Injection via PIL ImageMath.eval(function_str, ...)"},
+    {"id": "PYGOAT-008", "file": "introduction/views.py", "line_start": 857, "line_end": 871, "cwe": "CWE-89", "severity": "CRITICAL", "label": "vulnerable", "source": "repo-code-verified", "notes": "SQL Injection in injection_sql_lab"},
+    {"id": "PYGOAT-009", "file": "introduction/views.py", "line_start": 956, "line_end": 956, "cwe": "CWE-918", "severity": "HIGH", "label": "vulnerable", "source": "repo-code-verified", "notes": "SSRF via requests.get(url)"},
+    {"id": "PYGOAT-010", "file": "pygoat/settings.py", "line_start": 25, "line_end": 25, "cwe": "CWE-798", "severity": "HIGH", "label": "vulnerable", "source": "repo-code-verified", "notes": "Hardcoded Django SECRET_KEY"},
+    {"id": "PYGOAT-011", "file": "pygoat/settings.py", "line_start": 30, "line_end": 30, "cwe": "CWE-489", "severity": "MEDIUM", "label": "vulnerable", "source": "repo-code-verified", "notes": "Django DEBUG = True enabled"}
+  ],
+  "clean_negative_regions": []
+}

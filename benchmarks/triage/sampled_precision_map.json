@@ -1,0 +1,1519 @@
+{
+  "seed": 42,
+  "per_tool": 30,
+  "sampled_per_tool": {
+    "codeguardian": 30,
+    "semgrep": 30,
+    "codeql": 8,
+    "bandit": 30
+  },
+  "deduplicated_items": 82,
+  "samples": {
+    "SP-001": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/jaraco/context.py",
+      "line_start": 183,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "8352ac93-0f94-43ca-800a-aa52ed907ef2",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 183,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-002": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/externals/loky/backend/utils.py",
+      "line_start": 110,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "3bd1a11d-3551-44bd-8307-bdb828d84c16",
+          "rule_id": "B607",
+          "line_start": 110,
+          "cwe": "CWE-78"
+        },
+        {
+          "tool": "codeguardian",
+          "finding_id": "f5ea9791-1506-4837-b949-ab71b6a2b515",
+          "rule_id": "SAST-002",
+          "line_start": 110,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-003": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/command/easy_install.py",
+      "line_start": 2003,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "2133c38f-333c-417d-9ae0-75c4b3cb3b28",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 2003,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-004": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/command/easy_install.py",
+      "line_start": 2086,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "b74c145a-9fd4-4f76-9199-c0e96ef287c7",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 2086,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-005": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/jaraco/text/__init__.py",
+      "line_start": 402,
+      "cwe": "CWE-116",
+      "norm_cwe": "CWE-116",
+      "occurrences": [
+        {
+          "tool": "codeql",
+          "finding_id": "65cba1b7-255b-4763-8e40-c66ec2116995",
+          "rule_id": "py/bad-tag-filter",
+          "line_start": 402,
+          "cwe": "CWE-116"
+        }
+      ]
+    },
+    "SP-006": {
+      "repo_id": "81b476fc-12fe-4604-8263-fabd00eece09",
+      "repo_name": "aio-libs/aiohttp (1c335944)",
+      "file_path": "aiohttp/web.py",
+      "line_start": 577,
+      "cwe": "CWE-706",
+      "norm_cwe": "CWE-706",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "82e93d73-782e-4441-8c6e-ac4f34afdbb8",
+          "rule_id": "rules.python-security.lang.security.audit.non-literal-import",
+          "line_start": 577,
+          "cwe": "CWE-706"
+        }
+      ]
+    },
+    "SP-007": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/config.py",
+      "line_start": 62,
+      "cwe": "CWE-259",
+      "norm_cwe": "CWE-798",
+      "occurrences": [
+        {
+          "tool": "codeql",
+          "finding_id": "84db2764-a8ec-4a6b-a583-0359544ee77d",
+          "rule_id": "py/hardcoded-credentials",
+          "line_start": 62,
+          "cwe": "CWE-259"
+        }
+      ]
+    },
+    "SP-008": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/externals/loky/backend/popen_loky_posix.py",
+      "line_start": 164,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "1064a6ad-f167-48df-8b18-e5ce8b7f01ec",
+          "rule_id": "B301",
+          "line_start": 164,
+          "cwe": "CWE-502"
+        },
+        {
+          "tool": "semgrep",
+          "finding_id": "6fc9ec54-c1e9-4898-ad1d-cc1ae55fe3f1",
+          "rule_id": "rules.python-security.lang.security.deserialization.avoid-pickle",
+          "line_start": 164,
+          "cwe": "CWE-502"
+        },
+        {
+          "tool": "codeguardian",
+          "finding_id": "51c508dc-d8fa-494d-b6d2-a53d96ce7002",
+          "rule_id": "SAST-002",
+          "line_start": 166,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-009": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/externals/loky/backend/popen_loky_win32.py",
+      "line_start": 148,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "7213c63b-a3b0-4c03-b056-df2b93683c0a",
+          "rule_id": "SAST-001",
+          "line_start": 148,
+          "cwe": "CWE-502"
+        },
+        {
+          "tool": "bandit",
+          "finding_id": "4b9e4474-dcff-4dbc-8b39-4759df0e520d",
+          "rule_id": "B301",
+          "line_start": 150,
+          "cwe": "CWE-502"
+        },
+        {
+          "tool": "codeguardian",
+          "finding_id": "d86db388-2262-4c22-816e-96bf8ef44bc0",
+          "rule_id": "SAST-002",
+          "line_start": 150,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-010": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/command/upload.py",
+      "line_start": 183,
+      "cwe": "CWE-699",
+      "norm_cwe": "CWE-699",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "02a6cfe1-659c-4ccb-939d-8d6ec93e24a6",
+          "rule_id": "SAST-001",
+          "line_start": 183,
+          "cwe": "CWE-699"
+        }
+      ]
+    },
+    "SP-011": {
+      "repo_id": "81b476fc-12fe-4604-8263-fabd00eece09",
+      "repo_name": "aio-libs/aiohttp (1c335944)",
+      "file_path": "aiohttp/helpers.py",
+      "line_start": 264,
+      "cwe": "CWE-259",
+      "norm_cwe": "CWE-798",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "bd999f8e-6e8b-495f-9231-afcf8f4d96be",
+          "rule_id": "B105",
+          "line_start": 264,
+          "cwe": "CWE-259"
+        }
+      ]
+    },
+    "SP-012": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/config.py",
+      "line_start": 48,
+      "cwe": "CWE-312",
+      "norm_cwe": "CWE-312",
+      "occurrences": [
+        {
+          "tool": "codeql",
+          "finding_id": "92dec565-2980-4130-ae2f-20e4ebe83f88",
+          "rule_id": "py/clear-text-storage-sensitive-data",
+          "line_start": 48,
+          "cwe": "CWE-312"
+        }
+      ]
+    },
+    "SP-013": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/more_itertools/more.py",
+      "line_start": 3320,
+      "cwe": "CWE-330",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "a58e0319-2cb9-4795-8c7c-00c631cd7fe2",
+          "rule_id": "B311",
+          "line_start": 3320,
+          "cwe": "CWE-330"
+        }
+      ]
+    },
+    "SP-014": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/externals/cloudpickle/cloudpickle_fast.py",
+      "line_start": 359,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "c55767f0-dc68-4a7e-a8ae-673477da37e5",
+          "rule_id": "rules.python-security.lang.security.deserialization.avoid-pickle",
+          "line_start": 359,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-015": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/more_itertools/recipes.py",
+      "line_start": 492,
+      "cwe": "CWE-327",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "8e839cc3-4512-4237-b32f-50780b768dfb",
+          "rule_id": "SAST-001",
+          "line_start": 492,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-016": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/backports/tarfile.py",
+      "line_start": 320,
+      "cwe": "CWE-732",
+      "norm_cwe": "CWE-732",
+      "occurrences": [
+        {
+          "tool": "codeql",
+          "finding_id": "aef29575-4966-443b-8795-f995db88164b",
+          "rule_id": "py/overly-permissive-file",
+          "line_start": 320,
+          "cwe": "CWE-732"
+        }
+      ]
+    },
+    "SP-017": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/command/_framework_compat.py",
+      "line_start": 44,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "05dca72e-236f-46b0-ae94-8ed04ce1661f",
+          "rule_id": "SAST-001",
+          "line_start": 44,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-018": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/ccompiler.py",
+      "line_start": 1011,
+      "cwe": "CWE-95",
+      "norm_cwe": "CWE-94",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "d890cdaf-ff2a-4fc3-b55f-8ae9ff472ac9",
+          "rule_id": "SAST-001",
+          "line_start": 1011,
+          "cwe": "CWE-95"
+        }
+      ]
+    },
+    "SP-019": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/core.py",
+      "line_start": 266,
+      "cwe": "CWE-95",
+      "norm_cwe": "CWE-94",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "e8430959-df45-4b91-96de-57fced62f999",
+          "rule_id": "SAST-001",
+          "line_start": 266,
+          "cwe": "CWE-95"
+        }
+      ]
+    },
+    "SP-020": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/externals/loky/backend/context.py",
+      "line_start": 207,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "0ef1b162-a184-4b9b-a029-0521d82912d2",
+          "rule_id": "B603",
+          "line_start": 207,
+          "cwe": "CWE-78"
+        },
+        {
+          "tool": "semgrep",
+          "finding_id": "e69e4808-5d8e-40af-9a23-44b3e9967a93",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 207,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-021": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/build_meta.py",
+      "line_start": 311,
+      "cwe": "CWE-95",
+      "norm_cwe": "CWE-94",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "d598f025-6b00-44de-8fb0-547dc70dee2b",
+          "rule_id": "SAST-001",
+          "line_start": 311,
+          "cwe": "CWE-95"
+        }
+      ]
+    },
+    "SP-022": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/more_itertools/more.py",
+      "line_start": 3502,
+      "cwe": "CWE-327",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "9c29bc9f-810e-4aac-abe4-41fc69558c82",
+          "rule_id": "SAST-004",
+          "line_start": 3502,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-023": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/pool.py",
+      "line_start": 28,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "6f130ada-5067-4527-88cd-64bc799bdbdb",
+          "rule_id": "B403",
+          "line_start": 28,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-024": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/msvc.py",
+      "line_start": 97,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "a50815ed-c2fa-4592-85a9-e9021900a381",
+          "rule_id": "SAST-001",
+          "line_start": 97,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-025": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/more_itertools/more.py",
+      "line_start": 3299,
+      "cwe": "CWE-330",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "0810ffc9-f228-4a1b-b799-0775cb9c0549",
+          "rule_id": "B311",
+          "line_start": 3299,
+          "cwe": "CWE-330"
+        },
+        {
+          "tool": "codeguardian",
+          "finding_id": "9201dfd1-7eed-4a2e-9c76-9dd604ace941",
+          "rule_id": "SAST-004",
+          "line_start": 3299,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-026": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/cygwinccompiler.py",
+      "line_start": 16,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "0f1f0a95-5b39-412c-8ed5-f0e492330b21",
+          "rule_id": "B404",
+          "line_start": 16,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-027": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/command/register.py",
+      "line_start": 218,
+      "cwe": "CWE-259",
+      "norm_cwe": "CWE-798",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "620a7945-4d8b-4330-8135-03e2938cff6f",
+          "rule_id": "B105",
+          "line_start": 218,
+          "cwe": "CWE-259"
+        }
+      ]
+    },
+    "SP-028": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/jaraco/functools/__init__.py",
+      "line_start": 522,
+      "cwe": "CWE-95",
+      "norm_cwe": "CWE-94",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "b31e7367-f186-4f55-b638-97509dd8359b",
+          "rule_id": "rules.python-security.lang.security.audit.eval-detected",
+          "line_start": 522,
+          "cwe": "CWE-95"
+        }
+      ]
+    },
+    "SP-029": {
+      "repo_id": "81b476fc-12fe-4604-8263-fabd00eece09",
+      "repo_name": "aio-libs/aiohttp (1c335944)",
+      "file_path": "aiohttp/web_ws.py",
+      "line_start": 233,
+      "cwe": "CWE-327",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "a80664cf-7f6f-4a2d-bbb6-c8c0b9e39e43",
+          "rule_id": "B324",
+          "line_start": 233,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-030": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/__init__.py",
+      "line_start": 1540,
+      "cwe": "CWE-95",
+      "norm_cwe": "CWE-94",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "73d1febf-f488-4990-9238-301047b0d6ca",
+          "rule_id": "rules.python-security.lang.security.audit.exec-detected",
+          "line_start": 1540,
+          "cwe": "CWE-95"
+        }
+      ]
+    },
+    "SP-031": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/msvc9compiler.py",
+      "line_start": 282,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "19cc1099-0095-421c-a4fb-024f3b557f38",
+          "rule_id": "B603",
+          "line_start": 282,
+          "cwe": "CWE-78"
+        },
+        {
+          "tool": "semgrep",
+          "finding_id": "e8918020-0710-4053-ba70-f6f46217fce2",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 282,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-032": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/packaging/tags.py",
+      "line_start": 418,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "c1173d2f-30b9-42e6-9863-508b86a9c7dc",
+          "rule_id": "SAST-001",
+          "line_start": 418,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-033": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/command/easy_install.py",
+      "line_start": 463,
+      "cwe": "CWE-327",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "dc3d2331-0805-4031-b4c4-04b51b38a39d",
+          "rule_id": "SAST-001",
+          "line_start": 463,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-034": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/more_itertools/more.py",
+      "line_start": 3310,
+      "cwe": "CWE-327",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "66b77251-6509-43e4-8a42-b88773e4b5ce",
+          "rule_id": "SAST-006",
+          "line_start": 3310,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-035": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/jaraco/context.py",
+      "line_start": 63,
+      "cwe": "CWE-939",
+      "norm_cwe": "CWE-939",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "31859380-e72d-421a-9db0-a1a6c066797b",
+          "rule_id": "rules.python-security.lang.security.audit.dynamic-urllib-use-detected",
+          "line_start": 63,
+          "cwe": "CWE-939"
+        }
+      ]
+    },
+    "SP-036": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/config.py",
+      "line_start": 108,
+      "cwe": "CWE-259",
+      "norm_cwe": "CWE-798",
+      "occurrences": [
+        {
+          "tool": "codeql",
+          "finding_id": "75553035-12d5-4af5-83b7-2abfb9315da2",
+          "rule_id": "py/hardcoded-credentials",
+          "line_start": 108,
+          "cwe": "CWE-259"
+        }
+      ]
+    },
+    "SP-037": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/more_itertools/more.py",
+      "line_start": 3513,
+      "cwe": "CWE-327",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "d0b6cd98-d5d2-4df4-9b67-5196d4c455e7",
+          "rule_id": "SAST-006",
+          "line_start": 3513,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-038": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/command/easy_install.py",
+      "line_start": 1089,
+      "cwe": "CWE-96",
+      "norm_cwe": "CWE-94",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "439549d6-0bfb-40b8-8c6e-2556e984ba07",
+          "rule_id": "rules.python-security.lang.security.dangerous-globals-use",
+          "line_start": 1089,
+          "cwe": "CWE-96"
+        }
+      ]
+    },
+    "SP-039": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/testing.py",
+      "line_start": 46,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "f2611333-5d9c-4ed1-bc03-04e537aed1bd",
+          "rule_id": "SAST-001",
+          "line_start": 46,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-040": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/sandbox.py",
+      "line_start": 109,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "11a52a99-bd4d-4319-85ca-32908e3c4869",
+          "rule_id": "rules.python-security.lang.security.deserialization.avoid-pickle",
+          "line_start": 109,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-041": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/command/egg_info.py",
+      "line_start": 310,
+      "cwe": "CWE-89",
+      "norm_cwe": "CWE-89",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "7bae3a88-c0cc-439d-99a5-f4d8320a7036",
+          "rule_id": "SAST-001",
+          "line_start": 310,
+          "cwe": "CWE-89"
+        }
+      ]
+    },
+    "SP-042": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/util.py",
+      "line_start": 452,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "98bc3400-2aeb-41b8-90e5-7febfddd4d14",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 452,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-043": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/__init__.py",
+      "line_start": 2255,
+      "cwe": "CWE-706",
+      "norm_cwe": "CWE-706",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "6e3a512d-5c6c-4118-9729-b670a8e93445",
+          "rule_id": "rules.python-security.lang.security.audit.non-literal-import",
+          "line_start": 2255,
+          "cwe": "CWE-706"
+        }
+      ]
+    },
+    "SP-044": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/more_itertools/more.py",
+      "line_start": 3292,
+      "cwe": "CWE-327",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "fb2bd8bf-02bd-4311-b635-bb103a4e086e",
+          "rule_id": "SAST-002",
+          "line_start": 3292,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-045": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/numpy_pickle_utils.py",
+      "line_start": 7,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "31e8faeb-6129-4fd3-b42d-1939b7b84488",
+          "rule_id": "B403",
+          "line_start": 7,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-046": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/more_itertools/recipes.py",
+      "line_start": 637,
+      "cwe": "CWE-330",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "234ea025-b9f1-4e5f-a25d-97a5216d1584",
+          "rule_id": "B311",
+          "line_start": 637,
+          "cwe": "CWE-330"
+        }
+      ]
+    },
+    "SP-047": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/externals/loky/backend/utils.py",
+      "line_start": 80,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "4232eb09-0ee7-48a3-a722-a9fb0d94d3ad",
+          "rule_id": "B607",
+          "line_start": 80,
+          "cwe": "CWE-78"
+        },
+        {
+          "tool": "bandit",
+          "finding_id": "732ae6ff-f19a-4b4a-b642-a85d4c802f96",
+          "rule_id": "B603",
+          "line_start": 80,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-048": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/packaging/_musllinux.py",
+      "line_start": 50,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "e36c08a2-b95c-4c44-982d-fcbf8af68a88",
+          "rule_id": "B603",
+          "line_start": 50,
+          "cwe": "CWE-78"
+        },
+        {
+          "tool": "semgrep",
+          "finding_id": "4ca64493-9d4f-46e1-8158-d66759b26152",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 50,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-049": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/util.py",
+      "line_start": 415,
+      "cwe": "CWE-377",
+      "norm_cwe": "CWE-377",
+      "occurrences": [
+        {
+          "tool": "codeql",
+          "finding_id": "b23fe36b-7e40-4c1a-ac5b-740f01c5ffac",
+          "rule_id": "py/insecure-temporary-file",
+          "line_start": 415,
+          "cwe": "CWE-377"
+        }
+      ]
+    },
+    "SP-050": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/_memmapping_reducer.py",
+      "line_start": 313,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "e5c210ba-ee56-40af-a18a-4725d6c5a945",
+          "rule_id": "rules.python-security.lang.security.deserialization.avoid-pickle",
+          "line_start": 313,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-051": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/_msvccompiler.py",
+      "line_start": 83,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "b3f9f01c-10f5-4a62-9ce1-9c971d5043c7",
+          "rule_id": "SAST-001",
+          "line_start": 83,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-052": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/command/bdist_rpm.py",
+      "line_start": 7,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "536426b9-e2af-4c13-a14c-db2f2cfa4933",
+          "rule_id": "B404",
+          "line_start": 7,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-053": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/importlib_metadata/__init__.py",
+      "line_start": 208,
+      "cwe": "CWE-706",
+      "norm_cwe": "CWE-706",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "233fec35-6760-4151-a594-d7eaee9c29a2",
+          "rule_id": "rules.python-security.lang.security.audit.non-literal-import",
+          "line_start": 208,
+          "cwe": "CWE-706"
+        }
+      ]
+    },
+    "SP-054": {
+      "repo_id": "81b476fc-12fe-4604-8263-fabd00eece09",
+      "repo_name": "aio-libs/aiohttp (1c335944)",
+      "file_path": "aiohttp/cookiejar.py",
+      "line_start": 113,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "bc78314c-a1b3-477a-82ef-70cca6a497d2",
+          "rule_id": "SAST-001",
+          "line_start": 113,
+          "cwe": "CWE-502"
+        },
+        {
+          "tool": "semgrep",
+          "finding_id": "c8e18bd4-d8b9-4488-857c-a28086aa36c3",
+          "rule_id": "rules.python-security.lang.security.deserialization.avoid-pickle",
+          "line_start": 113,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-055": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "benchmarks/bench_compression.py",
+      "line_start": 232,
+      "cwe": "CWE-377",
+      "norm_cwe": "CWE-377",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "2ac31e70-22c3-44a4-a7d8-6df374862314",
+          "rule_id": "B108",
+          "line_start": 232,
+          "cwe": "CWE-377"
+        }
+      ]
+    },
+    "SP-056": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/core.py",
+      "line_start": 266,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "1eef1c40-7f1c-4f5d-b674-8f74a08b997d",
+          "rule_id": "B102",
+          "line_start": 266,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-057": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/__init__.py",
+      "line_start": 1529,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "f8cc526c-eabe-4646-b4dc-7c04adf6216f",
+          "rule_id": "B102",
+          "line_start": 1529,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-058": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/more_itertools/more.py",
+      "line_start": 3535,
+      "cwe": "CWE-327",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "925fd8f7-81ca-4753-b181-77a95885c437",
+          "rule_id": "SAST-008",
+          "line_start": 3535,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-059": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "exercises.py",
+      "line_start": 6,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "e4fec701-0765-49a8-81a0-ff4a777921bd",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 6,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-060": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/command/register.py",
+      "line_start": 99,
+      "cwe": "CWE-699",
+      "norm_cwe": "CWE-699",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "7621dca4-ecf1-4c48-bda5-e915ac26633d",
+          "rule_id": "SAST-001",
+          "line_start": 99,
+          "cwe": "CWE-699"
+        }
+      ]
+    },
+    "SP-061": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/command/register.py",
+      "line_start": 99,
+      "cwe": "CWE-939",
+      "norm_cwe": "CWE-939",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "f419ddd3-ba26-4aa8-9f5d-c636e2f2100a",
+          "rule_id": "rules.python-security.lang.security.audit.dynamic-urllib-use-detected",
+          "line_start": 99,
+          "cwe": "CWE-939"
+        }
+      ]
+    },
+    "SP-062": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/depends.py",
+      "line_start": 114,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "85f3e4fa-3a5e-443c-839c-e3afbc25a284",
+          "rule_id": "B302",
+          "line_start": 114,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-063": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/jaraco/functools/__init__.py",
+      "line_start": 522,
+      "cwe": "CWE-95",
+      "norm_cwe": "CWE-94",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "cade666b-54ea-4973-9052-495b877793fd",
+          "rule_id": "rules.python-security.lang.security.audit.eval-detected",
+          "line_start": 522,
+          "cwe": "CWE-95"
+        }
+      ]
+    },
+    "SP-064": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/packaging/_musllinux.py",
+      "line_start": 50,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "c569827d-1d19-4b81-9091-bf0153c1dbd5",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 50,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-065": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/config/_validate_pyproject/formats.py",
+      "line_start": 123,
+      "cwe": "CWE-939",
+      "norm_cwe": "CWE-939",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "a54fbfa5-29ae-426c-86bb-df0675398d26",
+          "rule_id": "rules.python-security.lang.security.audit.dynamic-urllib-use-detected",
+          "line_start": 123,
+          "cwe": "CWE-939"
+        }
+      ]
+    },
+    "SP-066": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/packaging/tags.py",
+      "line_start": 418,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "cefa85cd-5606-4962-b071-a60bc0f81e3a",
+          "rule_id": "B603",
+          "line_start": 418,
+          "cwe": "CWE-78"
+        },
+        {
+          "tool": "codeguardian",
+          "finding_id": "6c98ae4f-3e94-488e-979c-b0c549a36227",
+          "rule_id": "SAST-001",
+          "line_start": 418,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-067": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/jaraco/text/__init__.py",
+      "line_start": 402,
+      "cwe": "CWE-116",
+      "norm_cwe": "CWE-116",
+      "occurrences": [
+        {
+          "tool": "codeql",
+          "finding_id": "1f4e2aed-8b9c-4399-bddb-9ebe97f43de2",
+          "rule_id": "py/bad-tag-filter",
+          "line_start": 402,
+          "cwe": "CWE-116"
+        }
+      ]
+    },
+    "SP-068": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/packaging/_musllinux.py",
+      "line_start": 9,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "306362a2-4492-49e8-9066-a6872f5e67da",
+          "rule_id": "B404",
+          "line_start": 9,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-069": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/command/bdist_rpm.py",
+      "line_start": 424,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "85ac204b-bc72-4705-93df-0d820caa528e",
+          "rule_id": "B607",
+          "line_start": 424,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-070": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_vendor/more_itertools/recipes.py",
+      "line_start": 542,
+      "cwe": "CWE-327",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "139a4067-cc31-4879-b469-46262622603f",
+          "rule_id": "SAST-002",
+          "line_start": 542,
+          "cwe": "CWE-327"
+        }
+      ]
+    },
+    "SP-071": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/spawn.py",
+      "line_start": 57,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "26fb3a79-e88f-44e5-b703-993094e802b7",
+          "rule_id": "B603",
+          "line_start": 57,
+          "cwe": "CWE-78"
+        },
+        {
+          "tool": "codeguardian",
+          "finding_id": "fc6e73e3-7aa0-4ad2-9ca8-b7a89cf04966",
+          "rule_id": "SAST-001",
+          "line_start": 57,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-072": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/externals/loky/backend/fork_exec.py",
+      "line_start": 40,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "0dd20992-6f84-4716-a94a-1fac08fd7253",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-os-exec-audit",
+          "line_start": 40,
+          "cwe": "CWE-78"
+        },
+        {
+          "tool": "semgrep",
+          "finding_id": "caf898fc-67fc-4333-880a-43f9f98cf6ec",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-os-exec-tainted-env-args",
+          "line_start": 40,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-073": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/_deprecated_format_stack.py",
+      "line_start": 288,
+      "cwe": "CWE-95",
+      "norm_cwe": "CWE-94",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "149fbfd9-e699-4189-8ea5-21b3403a5544",
+          "rule_id": "SAST-001",
+          "line_start": 288,
+          "cwe": "CWE-95"
+        },
+        {
+          "tool": "semgrep",
+          "finding_id": "277f8989-a09d-4d36-a61e-748f7dea8401",
+          "rule_id": "rules.python-security.lang.security.audit.eval-detected",
+          "line_start": 288,
+          "cwe": "CWE-95"
+        }
+      ]
+    },
+    "SP-074": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/more_itertools/recipes.py",
+      "line_start": 622,
+      "cwe": "CWE-330",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "e599311f-4197-4ebf-b9a1-7d34d092520e",
+          "rule_id": "B311",
+          "line_start": 622,
+          "cwe": "CWE-330"
+        }
+      ]
+    },
+    "SP-075": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/command/easy_install.py",
+      "line_start": 1093,
+      "cwe": "CWE-96",
+      "norm_cwe": "CWE-94",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "440c07b3-bef4-4dad-bf98-044590ffa415",
+          "rule_id": "rules.python-security.lang.security.dangerous-globals-use",
+          "line_start": 1093,
+          "cwe": "CWE-96"
+        }
+      ]
+    },
+    "SP-076": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/hashing.py",
+      "line_start": 10,
+      "cwe": "CWE-502",
+      "norm_cwe": "CWE-502",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "b419d894-6675-4154-9252-aed844032505",
+          "rule_id": "B403",
+          "line_start": 10,
+          "cwe": "CWE-502"
+        }
+      ]
+    },
+    "SP-077": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/_distutils/cygwinccompiler.py",
+      "line_start": 347,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "codeguardian",
+          "finding_id": "5b6ba352-dae7-41b4-ac0f-700031bd71fc",
+          "rule_id": "SAST-001",
+          "line_start": 347,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-078": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/more_itertools/recipes.py",
+      "line_start": 604,
+      "cwe": "CWE-330",
+      "norm_cwe": "CWE-327",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "84cd206b-86da-4744-9126-4c949cfdfffa",
+          "rule_id": "B311",
+          "line_start": 604,
+          "cwe": "CWE-330"
+        }
+      ]
+    },
+    "SP-079": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/msvc.py",
+      "line_start": 190,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "bandit",
+          "finding_id": "44ef48d2-fc96-402c-bcb4-0afefbe04fd0",
+          "rule_id": "B603",
+          "line_start": 190,
+          "cwe": "CWE-78"
+        },
+        {
+          "tool": "codeguardian",
+          "finding_id": "c10397ad-baed-4f57-8cea-2be7c5bb223f",
+          "rule_id": "SAST-002",
+          "line_start": 190,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-080": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "setuptools/config/_validate_pyproject/formats.py",
+      "line_start": 47,
+      "cwe": "CWE-1333",
+      "norm_cwe": "CWE-400",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "bf60b671-52f8-4b79-9831-36de1283b414",
+          "rule_id": "rules.python-security.lang.security.audit.regex_dos",
+          "line_start": 47,
+          "cwe": "CWE-1333"
+        }
+      ]
+    },
+    "SP-081": {
+      "repo_id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
+      "repo_name": "joblib/joblib (b90f10ef)",
+      "file_path": "joblib/externals/loky/backend/context.py",
+      "line_start": 193,
+      "cwe": "CWE-78",
+      "norm_cwe": "CWE-78",
+      "occurrences": [
+        {
+          "tool": "semgrep",
+          "finding_id": "8e9be41a-3e2d-4c20-b332-81159cbc6750",
+          "rule_id": "rules.python-security.lang.security.audit.dangerous-subprocess-use-audit",
+          "line_start": 193,
+          "cwe": "CWE-78"
+        }
+      ]
+    },
+    "SP-082": {
+      "repo_id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
+      "repo_name": "pypa/setuptools (88807c70)",
+      "file_path": "pkg_resources/_vendor/backports/tarfile.py",
+      "line_start": 320,
+      "cwe": "CWE-732",
+      "norm_cwe": "CWE-732",
+      "occurrences": [
+        {
+          "tool": "codeql",
+          "finding_id": "e6230771-5a53-4c92-8b9d-a07354df56e2",
+          "rule_id": "py/overly-permissive-file",
+          "line_start": 320,
+          "cwe": "CWE-732"
+        }
+      ]
+    }
+  }
+}

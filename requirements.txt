@@ -3,6 +3,7 @@ annotated-types==0.7.0
 anyio==4.12.1
 attrs==26.1.0
 bcrypt==5.0.0
+python-jose[cryptography]>=3.3.0
 build==1.4.4
 certifi==2026.6.17
 charset-normalizer==3.4.9

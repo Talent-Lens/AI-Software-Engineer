@@ -15,7 +15,12 @@ from src.db.models import (
     EvalExperiment,
     UserFeedback,
     AuditLog,
+    User,
+    GitHubInstallation,
+    utc_now,
 )
+import bcrypt
+
 
 logger = logging.getLogger("ai_engineer.db.crud")
 
@@ -309,3 +314,128 @@ def get_analytics_overview(db: Session) -> Dict[str, Any]:
         },
         "latest_eval_metrics": latest_eval.to_dict() if latest_eval else None,
     }
+
+
+# ==========================================
+# USER & AUTHENTICATION CRUD
+# ==========================================
+
+def hash_secret(secret_text: str) -> str:
+    """Generates a secure salt and hashes the plaintext password."""
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(secret_text.encode("utf-8"), salt).decode("utf-8")
+
+
+def check_secret(plain_text: str, stored_hash: str) -> bool:
+    """Compares plaintext secret against stored bcrypt hash."""
+    return bcrypt.checkpw(plain_text.encode("utf-8"), stored_hash.encode("utf-8"))
+
+
+def create_user(
+    db: Session,
+    email: str,
+    username: str,
+    password: str,
+    display_name: Optional[str] = None
+) -> User:
+    new_user = User(
+        email=email.strip().lower(),
+        username=username.strip(),
+        display_name=(display_name or username).strip(),
+        hashed_password=hash_secret(password),
+        role="user",
+        is_active=True,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+
+def get_user_by_email(db: Session, email: str) -> Optional[User]:
+    return db.query(User).filter(User.email == email.strip().lower()).first()
+
+
+def get_user_by_username(db: Session, username: str) -> Optional[User]:
+    return db.query(User).filter(User.username == username.strip()).first()
+
+
+def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
+    return db.query(User).filter(User.id == user_id).first()
+
+
+def authenticate_user(db: Session, login: str, password: str) -> Optional[User]:
+    clean_login = login.strip()
+    target_user = (
+        get_user_by_email(db, clean_login)
+        if "@" in clean_login
+        else get_user_by_username(db, clean_login)
+    )
+    if not target_user or not target_user.is_active:
+        return None
+    if not check_secret(password, target_user.hashed_password):
+        return None
+    return target_user
+
+
+def update_last_login(db: Session, user_id: str) -> None:
+    found = get_user_by_id(db, user_id)
+    if found:
+        found.last_login_at = utc_now()
+        db.commit()
+
+
+# ==========================================
+# GITHUB APP INSTALLATION CRUD
+# ==========================================
+
+def get_github_installation_by_user_id(db: Session, user_id: str) -> Optional[GitHubInstallation]:
+    """Retrieve the GitHub App installation record for an authenticated user."""
+    return db.query(GitHubInstallation).filter(GitHubInstallation.user_id == user_id).first()
+
+
+def upsert_github_installation(
+    db: Session,
+    user_id: str,
+    installation_id: int,
+    account_login: str = "",
+    account_avatar_url: str = "",
+    account_type: str = "User",
+    repository_selection: str = "selected",
+) -> GitHubInstallation:
+    """Create or update a GitHub App installation record for a user."""
+    existing = get_github_installation_by_user_id(db, user_id)
+    if existing:
+        existing.installation_id = installation_id
+        existing.account_login = account_login
+        existing.account_avatar_url = account_avatar_url
+        existing.account_type = account_type
+        existing.repository_selection = repository_selection
+        existing.updated_at = utc_now()
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    new_inst = GitHubInstallation(
+        user_id=user_id,
+        installation_id=installation_id,
+        account_login=account_login,
+        account_avatar_url=account_avatar_url,
+        account_type=account_type,
+        repository_selection=repository_selection,
+    )
+    db.add(new_inst)
+    db.commit()
+    db.refresh(new_inst)
+    return new_inst
+
+
+def delete_github_installation(db: Session, user_id: str) -> bool:
+    """Disconnect and delete the GitHub App installation record for a user."""
+    existing = get_github_installation_by_user_id(db, user_id)
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return True
+    return False
+

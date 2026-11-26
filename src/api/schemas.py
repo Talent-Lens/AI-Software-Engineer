@@ -3,8 +3,8 @@ Pydantic Request & Response Schemas for FastAPI API (TASK-FS1)
 """
 from __future__ import annotations
 
-from typing import Any, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class HealthResponse(BaseModel):
@@ -165,4 +165,84 @@ class CodeChatResponse(BaseModel):
     line_references: list[int] = Field(default_factory=list, description="Line numbers referenced in the answer")
     files_referenced: list[str] = Field(default_factory=list, description="Files referenced in the answer")
     status: str = "completed"
+
+
+
+class BenchmarkRequest(BaseModel):
+    """Request model for the benchmark endpoint.
+
+    repo_url: Public HTTPS URL of the GitHub repository to evaluate, GitHub slug (owner/repo), or local directory path.
+    test_type: Which independent judge to use. Options:
+        - "security" – run Bandit on the repo.
+        - "bugfix"   – run pytest on injected/fixed bugs.
+        - "rag"      – future RAG evaluator.
+    cve_ids: Optional list of CVE identifiers if you want to limit the test set.
+    """
+    repo_url: str
+    test_type: str = "security"
+    cve_ids: Optional[List[str]] = None
+
+class BenchmarkResult(BaseModel):
+    """Result of a single independent judge comparison."""
+    total_cases: int
+    detected_cases: int
+    false_positives: int
+    precision: float
+    recall: float
+    f1_score: float
+    details: Optional[List[Dict[str, Any]]] = None
+
+class BenchmarkResponse(BaseModel):
+    """Response model for the benchmark endpoint.
+
+    The `metrics` field contains the aggregated results from the selected judge.
+    """
+    status: str = "completed"
+    repo_url: str
+    test_type: str
+    metrics: BenchmarkResult
+    timestamp: str
+
+
+# ==========================================
+# AUTHENTICATION SCHEMAS
+# ==========================================
+
+class UserPublic(BaseModel):
+    id: str
+    email: str
+    username: str
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    role: str = "user"
+    created_at: Optional[str] = None
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+    username: str = Field(..., min_length=3, max_length=30)
+    password: str = Field(..., min_length=8, max_length=128)
+    display_name: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    login: str = Field(..., description="Email or Username")
+    password: str = Field(..., min_length=1)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: UserPublic
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class AuthMessageResponse(BaseModel):
+    message: str
+    status: str = "ok"
+
 

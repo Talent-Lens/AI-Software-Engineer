@@ -1,0 +1,99 @@
+{
+  "version": "2.0.0",
+  "source": "MITRE Common Weakness Enumeration (CWE) v4.15 Research Concepts (View-1000) & Software Development (View-699): https://cwe.mitre.org/data/definitions/1000.html",
+  "description": "Strict MITRE CWE parent/child clusters and separate top-level family clusters. Exact/parent-child equivalence NEVER merges with family equivalence.",
+  "canonical_clusters": {
+    "CWE-94": {
+      "title": "Improper Control of Generation of Code ('Code Injection')",
+      "mitre_parent": "CWE-707",
+      "aliases": ["CWE-94", "CWE-95", "CWE-96", "CODE_INJECTION", "EVAL_INJECTION"]
+    },
+    "CWE-78": {
+      "title": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+      "mitre_parent": "CWE-77",
+      "aliases": ["CWE-78", "CWE-77", "CWE-88", "COMMAND_INJECTION", "OS_COMMAND_INJECTION"]
+    },
+    "CWE-89": {
+      "title": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+      "mitre_parent": "CWE-943",
+      "aliases": ["CWE-89", "CWE-564", "CWE-943", "SQL_INJECTION", "SQLI", "A03:2021-Injection"]
+    },
+    "CWE-79": {
+      "title": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+      "mitre_parent": "CWE-707",
+      "aliases": ["CWE-79", "CWE-80", "CWE-83", "CWE-87", "XSS", "CROSS_SITE_SCRIPTING"]
+    },
+    "CWE-502": {
+      "title": "Deserialization of Untrusted Data",
+      "mitre_parent": "CWE-913",
+      "aliases": ["CWE-502", "UNSAFE_DESERIALIZATION", "DESERIALIZATION", "YAML_LOAD", "PICKLE"]
+    },
+    "CWE-22": {
+      "title": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+      "mitre_parent": "CWE-706",
+      "aliases": ["CWE-22", "CWE-23", "CWE-36", "PATH_TRAVERSAL", "DIRECTORY_TRAVERSAL"]
+    },
+    "CWE-327": {
+      "title": "Use of a Broken or Risky Cryptographic Algorithm",
+      "mitre_parent": "CWE-310",
+      "aliases": ["CWE-327", "CWE-328", "CWE-330", "CWE-326", "WEAK_CRYPTO", "WEAK_HASH", "INSECURE_RANDOM", "MD5", "SHA1"]
+    },
+    "CWE-798": {
+      "title": "Use of Hard-coded Credentials",
+      "mitre_parent": "CWE-287",
+      "aliases": ["CWE-798", "CWE-259", "CWE-321", "HARDCODED_SECRET", "HARDCODED_PASSWORD", "SECRET_KEY"]
+    },
+    "CWE-295": {
+      "title": "Improper Certificate Validation",
+      "mitre_parent": "CWE-287",
+      "aliases": ["CWE-295", "CWE-297", "DISABLED_SSL_VERIFY", "INSECURE_TRANSPORT", "VERIFY_FALSE"]
+    },
+    "CWE-400": {
+      "title": "Uncontrolled Resource Consumption",
+      "mitre_parent": "CWE-664",
+      "aliases": ["CWE-400", "CWE-674", "CWE-1333", "MISSING_TIMEOUT", "DOS"]
+    },
+    "CWE-1004": {
+      "title": "Sensitive Cookie Without 'HttpOnly' / 'Secure' Flag",
+      "mitre_parent": "CWE-284",
+      "aliases": ["CWE-1004", "CWE-614", "COOKIE_WITHOUT_SECURE", "COOKIE_WITHOUT_HTTPONLY"]
+    },
+    "CWE-601": {
+      "title": "URL Redirection to Untrusted Site ('Open Redirect')",
+      "mitre_parent": "CWE-284",
+      "aliases": ["CWE-601", "OPEN_REDIRECT"]
+    },
+    "CWE-352": {
+      "title": "Cross-Site Request Forgery (CSRF)",
+      "mitre_parent": "CWE-284",
+      "aliases": ["CWE-352", "CSRF"]
+    },
+    "CWE-918": {
+      "title": "Server-Side Request Forgery (SSRF)",
+      "mitre_parent": "CWE-284",
+      "aliases": ["CWE-918", "SSRF"]
+    }
+  },
+  "family_clusters": {
+    "CWE-707": {
+      "title": "Improper Neutralization (Injection & Path/Input Family)",
+      "members": ["CWE-74", "CWE-77", "CWE-78", "CWE-79", "CWE-88", "CWE-89", "CWE-94", "CWE-95", "CWE-96", "CWE-22", "CWE-23", "CWE-36", "CWE-706", "CWE-943"]
+    },
+    "CWE-913": {
+      "title": "Improper Control of Dynamically-Managed Code Resources / Deserialization",
+      "members": ["CWE-502", "CWE-470", "CWE-915"]
+    },
+    "CWE-310": {
+      "title": "Cryptographic Issues",
+      "members": ["CWE-326", "CWE-327", "CWE-328", "CWE-330", "CWE-321"]
+    },
+    "CWE-284": {
+      "title": "Improper Access Control & Authentication",
+      "members": ["CWE-259", "CWE-287", "CWE-295", "CWE-297", "CWE-352", "CWE-601", "CWE-614", "CWE-798", "CWE-918", "CWE-1004"]
+    },
+    "CWE-664": {
+      "title": "Improper Control of a Resource Through its Lifetime",
+      "members": ["CWE-377", "CWE-400", "CWE-674", "CWE-1333"]
+    }
+  }
+}

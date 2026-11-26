@@ -1,0 +1,164 @@
+{
+  "repo_name": "scitokens/scitokens (3dba1088)",
+  "url": "https://github.com/scitokens/scitokens",
+  "pinned_vulnerable_sha": "66b075c35da18f8364276553513a53c596b4b8e3",
+  "pinned_clean_sha": "3dba108853f2f4a6c0f2325c03779bf083c41cf2",
+  "language": "python",
+  "loc": 1721,
+  "description": "Auto-extracted benchmark for CVE-2026-32714",
+  "label_quality": "provisional",
+  "labeled_findings": [
+    {
+      "id": "GT-CVE-2026-32714-001",
+      "file": "src/scitokens/utils/keycache.py",
+      "line_start": 83,
+      "line_end": 83,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 3dba1088. Changed 1 line(s) in src/scitokens/utils/keycache.py.",
+      "deleted_lines": [
+        "            curs.execute(\"DELETE FROM keycache WHERE issuer = '{}' AND key_id = '{}'\".format(issuer, key_id))"
+      ],
+      "added_lines": [
+        "            curs.execute(\"DELETE FROM keycache WHERE issuer = ? AND key_id = ?\", [issuer, key_id])"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-32714-002",
+      "file": "src/scitokens/utils/keycache.py",
+      "line_start": 97,
+      "line_end": 98,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 3dba1088. Changed 2 line(s) in src/scitokens/utils/keycache.py.",
+      "deleted_lines": [
+        "        insert_key_statement = \"INSERT OR REPLACE INTO keycache VALUES('{issuer}', '{expiration}', '{key_id}', \\",
+        "                               '{keydata}', '{next_update}')\""
+      ],
+      "added_lines": [
+        "        insert_key_statement = \"INSERT OR REPLACE INTO keycache VALUES(?, ?, ?, ?, ?)\""
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-32714-003",
+      "file": "src/scitokens/utils/keycache.py",
+      "line_start": 103,
+      "line_end": 104,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 3dba1088. Changed 2 line(s) in src/scitokens/utils/keycache.py.",
+      "deleted_lines": [
+        "        curs.execute(insert_key_statement.format(issuer=issuer, expiration=time.time()+cache_timer, key_id=key_id,",
+        "                                                 keydata=json.dumps(keydata), next_update=time.time()+next_update))"
+      ],
+      "added_lines": [
+        "        curs.execute(insert_key_statement, [issuer, time.time()+cache_timer, key_id,",
+        "                                            json.dumps(keydata), time.time()+next_update])"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-32714-004",
+      "file": "src/scitokens/utils/keycache.py",
+      "line_start": 140,
+      "line_end": 141,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 3dba1088. Changed 2 line(s) in src/scitokens/utils/keycache.py.",
+      "deleted_lines": [
+        "            curs.execute(\"DELETE FROM keycache WHERE issuer = '{}' AND key_id = '{}'\".format(issuer,",
+        "                        key_id))"
+      ],
+      "added_lines": [
+        "            curs.execute(\"DELETE FROM keycache WHERE issuer = ? AND key_id = ?\", [issuer, key_id])"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-32714-005",
+      "file": "src/scitokens/utils/keycache.py",
+      "line_start": 157,
+      "line_end": 158,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 3dba1088. Changed 2 line(s) in src/scitokens/utils/keycache.py.",
+      "deleted_lines": [
+        "            insert_key_statement = \"INSERT OR REPLACE INTO keycache VALUES('{issuer}', '{expiration}', '{key_id}', \\",
+        "                                '{keydata}', '{next_update}')\""
+      ],
+      "added_lines": [
+        "            insert_key_statement = \"INSERT OR REPLACE INTO keycache VALUES(?, ?, ?, ?, ?)\""
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-32714-006",
+      "file": "src/scitokens/utils/keycache.py",
+      "line_start": 160,
+      "line_end": 161,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 3dba1088. Changed 2 line(s) in src/scitokens/utils/keycache.py.",
+      "deleted_lines": [
+        "            curs.execute(insert_key_statement.format(issuer=issuer, expiration=time.time()+cache_retry_interval, key_id=key_id,",
+        "                                                    keydata=keydata, next_update=time.time()+cache_retry_interval))"
+      ],
+      "added_lines": [
+        "            curs.execute(insert_key_statement, [issuer, time.time()+cache_retry_interval, key_id,",
+        "                                                keydata, time.time()+cache_retry_interval])"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-32714-007",
+      "file": "src/scitokens/utils/keycache.py",
+      "line_start": 217,
+      "line_end": 220,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 3dba1088. Changed 4 line(s) in src/scitokens/utils/keycache.py.",
+      "deleted_lines": [
+        "        key_query = (\"SELECT * FROM keycache WHERE \"",
+        "                     \"issuer = '{issuer}'\")",
+        "        if key_id != None:",
+        "            key_query += \" AND key_id = '{key_id}'\""
+      ],
+      "added_lines": [
+        "        if key_id is not None:",
+        "            key_query = \"SELECT * FROM keycache WHERE issuer = ? AND key_id = ?\"",
+        "            query_params = [issuer, key_id]",
+        "        else:",
+        "            key_query = \"SELECT * FROM keycache WHERE issuer = ?\"",
+        "            query_params = [issuer]"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-32714-008",
+      "file": "src/scitokens/utils/keycache.py",
+      "line_start": 226,
+      "line_end": 226,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 3dba1088. Changed 1 line(s) in src/scitokens/utils/keycache.py.",
+      "deleted_lines": [
+        "            curs.execute(key_query.format(issuer=issuer, key_id=key_id))"
+      ],
+      "added_lines": [
+        "            curs.execute(key_query, query_params)"
+      ]
+    }
+  ],
+  "clean_negative_regions": []
+}

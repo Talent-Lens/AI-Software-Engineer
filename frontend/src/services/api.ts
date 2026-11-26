@@ -1,4 +1,4 @@
-import { EvalReport, BenchmarkTestCase, UserFeedbackRequest } from '../types';
+import { EvalReport, BenchmarkTestCase, UserFeedbackRequest, RepoBenchmarkResponse } from '../types';
 
 function formatApiBaseUrl(raw: string | undefined): string {
   if (!raw) return '';
@@ -328,4 +328,437 @@ export async function fetchLaunchChecklist(repoPath?: string, files?: Record<str
 
   return await res.json();
 }
+
+export async function runRepoBenchmark(
+  repoUrl: string,
+  testType: 'security' | 'bugfix' | 'rag' = 'security'
+): Promise<RepoBenchmarkResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmark`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      repo_url: repoUrl,
+      test_type: testType,
+    }),
+  });
+
+  if (!res.ok) {
+    let errorDetail = `Benchmark evaluation failed with HTTP ${res.status}`;
+    try {
+      const errorJson = await res.json();
+      if (errorJson.detail) {
+        errorDetail = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
+      }
+    } catch (_) {}
+    throw new Error(errorDetail);
+  }
+
+  return await res.json();
+}
+
+export async function fetchBenchmarkOverview(verifiedOnly: boolean = false): Promise<import('../types').BenchmarkOverviewResponse> {
+  const url = `${API_BASE_URL}/api/v1/benchmarks/overview${verifiedOnly ? '?verified_only=true' : ''}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch benchmark overview: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function fetchBenchmarkCapabilities(): Promise<import('../types').BenchmarkCapabilitiesResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/capabilities`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    return {
+      benchmark_mode: 'readonly',
+      readonly: true,
+      can_mutate: false,
+      can_run: false,
+      can_add: false,
+      can_recompute: false,
+      can_triage: false,
+      can_latency_pass: false,
+    };
+  }
+  return await res.json();
+}
+
+export async function fetchResearchRepos(): Promise<import('../types').ResearchRepoItem[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch research repositories: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function fetchResearchRepoDetail(repoId: string): Promise<import('../types').ResearchRepoDetailResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch repository benchmark detail: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function addResearchRepo(repoUrl: string, identifier: string, cwe?: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ repo_url: repoUrl, identifier, cwe: cwe?.trim() || null }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to add research repo: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function fetchBenchmarkRunPlan(repoId: string, forceRescan = false): Promise<any> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/run-plan?force_rescan=${forceRescan ? 'true' : 'false'}`,
+    { headers: getAuthHeaders() },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to fetch run plan: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function runResearchRepo(repoId: string, forceRescan = false): Promise<any> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/run?force_rescan=${forceRescan ? 'true' : 'false'}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to run research repo pipeline: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function retryResearchRepo(repoId: string, forceRescan = false): Promise<any> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/retry?force_rescan=${forceRescan ? 'true' : 'false'}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to retry research repo pipeline: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function recomputeResearchRepo(repoId: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/recompute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to recompute metrics: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function recomputeAllResearchRepos(): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/recompute-all`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to recompute all metrics: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function startLatencyPass(repoIds?: string[], repeats = 3): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/latency-pass`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ repo_ids: repoIds || null, repeats }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to start latency pass: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function fetchLatestLatencyPass(): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/latency-pass/latest`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to fetch latency pass: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function excludeResearchRepo(repoId: string, reason: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/exclude`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to exclude repository: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function unexcludeResearchRepo(repoId: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/unexclude`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to re-include repository: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function deleteResearchRepo(repoId: string, reason?: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ reason: reason || null }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to delete repository: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function exportBlindTriage(repoId: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/blind-triage`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to export blind triage: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function importVerifiedTriage(repoId: string, findings: any[]): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/benchmarks/repos/${encodeURIComponent(repoId)}/verified-triage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ findings }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to import verified triage: HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+// ==========================================
+// AUTHENTICATION API SERVICES
+// ==========================================
+
+export function getAuthToken(): string | null {
+  return localStorage.getItem('access_token');
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function registerUser(
+  email: string,
+  username: string,
+  password: string,
+  displayName?: string
+): Promise<{ access_token: string; refresh_token: string; user: any }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      username,
+      password,
+      display_name: displayName,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new Error(errorJson.detail || 'Registration failed');
+  }
+
+  const data = await res.json();
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  return data;
+}
+
+export async function loginUser(
+  login: string,
+  password: string
+): Promise<{ access_token: string; refresh_token: string; user: any }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, password }),
+  });
+
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new Error(errorJson.detail || 'Invalid login credentials');
+  }
+
+  const data = await res.json();
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  return data;
+}
+
+export async function fetchCurrentUser(): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error('Session invalid');
+  }
+
+  return await res.json();
+}
+
+export function logoutUser(): void {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+}
+
+// ==========================================
+// GITHUB APP API CLIENT
+// ==========================================
+
+export async function fetchGitHubConnectUrl(): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/app/connect`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new Error(errorJson.detail || 'Failed to initiate GitHub authorization');
+  }
+
+  const data = await res.json();
+  return data.install_url;
+}
+
+export async function fetchGitHubInstallationStatus(): Promise<{
+  connected: boolean;
+  installation?: any;
+  repos: any[];
+  app_configured: boolean;
+  error?: string;
+}> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/installation`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    return { connected: false, repos: [], app_configured: false };
+  }
+
+  return await res.json();
+}
+
+export async function fetchGitHubBranches(owner: string, repo: string): Promise<string[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/branches?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    return ['main'];
+  }
+
+  const data = await res.json();
+  return data.branches || ['main'];
+}
+
+export async function disconnectGitHubApp(): Promise<boolean> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/disconnect`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  return res.ok;
+}
+
+export interface CreatePRPayload {
+  repo_full_name: string;
+  file_path: string;
+  patch_content: string;
+  base_branch?: string;
+  commit_message?: string;
+  pr_title?: string;
+  pr_body?: string;
+}
+
+export interface CreatePRResponse {
+  status: string;
+  pr_url: string;
+  pr_number: number;
+  branch: string;
+  base_branch: string;
+  repo: string;
+}
+
+export async function createGitHubPullRequest(payload: CreatePRPayload): Promise<CreatePRResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/github/create-pr`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    let errorDetail = `Failed to create Pull Request (HTTP ${res.status})`;
+    try {
+      const errorJson = await res.json();
+      if (errorJson.detail) {
+        errorDetail = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
+      }
+    } catch (_) {
+      // fallback
+    }
+    throw new Error(errorDetail);
+  }
+
+  return await res.json();
+}
+
+
 

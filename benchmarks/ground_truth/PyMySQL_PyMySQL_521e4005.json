@@ -1,0 +1,34 @@
+{
+  "repo_name": "PyMySQL/PyMySQL (521e4005)",
+  "url": "https://github.com/PyMySQL/PyMySQL",
+  "pinned_vulnerable_sha": "7f032a699d55340f05101deb4d7d4f63db4adc11",
+  "pinned_clean_sha": "521e40050cb386a499f68f483fefd144c493053c",
+  "language": "python",
+  "loc": 4242,
+  "description": "Auto-extracted benchmark for CVE-2024-36039",
+  "label_quality": "provisional",
+  "labeled_findings": [
+    {
+      "id": "GT-CVE-2024-36039-001",
+      "file": "pymysql/converters.py",
+      "line_start": 30,
+      "line_end": 34,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit 521e4005. Changed 5 line(s) in pymysql/converters.py.",
+      "deleted_lines": [
+        "    n = {}",
+        "    for k, v in val.items():",
+        "        quoted = escape_item(v, charset, mapping)",
+        "        n[k] = quoted",
+        "    return n"
+      ],
+      "added_lines": [
+        "    raise TypeError(\"dict can not be used as parameter\")"
+      ]
+    }
+  ],
+  "clean_negative_regions": []
+}

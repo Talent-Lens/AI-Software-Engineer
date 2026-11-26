@@ -1,0 +1,20 @@
+{
+  "repo_name": "red-and-black/DjangoGoat (b5123eba)",
+  "url": "https://github.com/red-and-black/DjangoGoat",
+  "pinned_vulnerable_sha": "b5123eba8c002adb4f5513197e7e69a724385d29",
+  "pinned_clean_sha": "5e6aaa6d0497bf24abd179304e6ca51295a8091d",
+  "repo_type": "cve_fix",
+  "language": "python",
+  "loc": 900,
+  "label_quality": "verified",
+  "description": "DjangoGoat broken branch (b5123eba) vs master branch (5e6aaa6d) dual-commit comparison.",
+  "labeled_findings": [
+    {"id": "DG-001", "file": "authentication/views.py", "line_start": 27, "line_end": 30, "cwe": "CWE-256", "severity": "HIGH", "label": "vulnerable", "source": "branch-diff-verified", "notes": "Storing cleartext_password=raw_password in UserProfile"},
+    {"id": "DG-002", "file": "authentication/views.py", "line_start": 46, "line_end": 57, "cwe": "CWE-89", "severity": "CRITICAL", "label": "vulnerable", "source": "branch-diff-verified", "notes": "SQL Injection via % formatting in User.objects.raw(query)"},
+    {"id": "DG-003", "file": "authentication/views.py", "line_start": 92, "line_end": 92, "cwe": "CWE-862", "severity": "MEDIUM", "label": "vulnerable", "source": "branch-diff-verified", "notes": "Removed @login_required decorator on profile view"},
+    {"id": "DG-004", "file": "djangogoat/settings.py", "line_start": 27, "line_end": 27, "cwe": "CWE-489", "severity": "MEDIUM", "label": "vulnerable", "source": "branch-diff-verified", "notes": "DEBUG = True enabled on broken branch"},
+    {"id": "DG-005", "file": "djangogoat/settings.py", "line_start": 140, "line_end": 140, "cwe": "CWE-1004", "severity": "MEDIUM", "label": "vulnerable", "source": "branch-diff-verified", "notes": "SESSION_COOKIE_HTTPONLY = False and security headers removed"},
+    {"id": "DG-006", "file": "notes/views.py", "line_start": 59, "line_end": 61, "cwe": "CWE-639", "severity": "HIGH", "label": "vulnerable", "source": "branch-diff-verified", "notes": "IDOR: removed sender/receiver ownership check in note()"}
+  ],
+  "clean_negative_regions": []
+}

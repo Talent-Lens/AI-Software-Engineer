@@ -30,6 +30,26 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: GITHUB_APP_ID
+        sync: false
+      - key: GITHUB_APP_SLUG
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_PRIVATE_KEY
+        sync: false
+      - key: FRONTEND_BASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: BENCHMARK_MODE
+        value: readonly
       - key: OLLAMA_BASE_URL
         value: http://localhost:11434
 

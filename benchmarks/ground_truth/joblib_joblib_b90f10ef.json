@@ -1,0 +1,53 @@
+{
+  "repo_name": "joblib/joblib (b90f10ef)",
+  "url": "https://github.com/joblib/joblib",
+  "pinned_vulnerable_sha": "1fdf3086674d7b1be27688e8c7aebd3159d89997",
+  "pinned_clean_sha": "b90f10efeb670a2cc877fb88ebb3f2019189e059",
+  "language": "python",
+  "loc": 15280,
+  "description": "Auto-extracted benchmark for b90f10ef",
+  "label_quality": "provisional",
+  "labeled_findings": [
+    {
+      "id": "GT-AUTO-001",
+      "file": "joblib/parallel.py",
+      "line_start": 507,
+      "line_end": 507,
+      "cwe": "CWE-HTTPS://NVD.NIST.GOV/VULN/DETAIL/CVE-2022-21797",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit b90f10ef. Changed 1 line(s) in joblib/parallel.py.",
+      "deleted_lines": [
+        "            default and the workers should never starve."
+      ],
+      "added_lines": [
+        "            default and the workers should never starve. Note that only basic",
+        "            arithmetics are allowed here and no modules can be used in this",
+        "            expression."
+      ]
+    },
+    {
+      "id": "GT-AUTO-002",
+      "file": "joblib/parallel.py",
+      "line_start": 1052,
+      "line_end": 1052,
+      "cwe": "CWE-HTTPS://NVD.NIST.GOV/VULN/DETAIL/CVE-2022-21797",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit b90f10ef. Changed 1 line(s) in joblib/parallel.py.",
+      "deleted_lines": [
+        "                pre_dispatch = eval(pre_dispatch)"
+      ],
+      "added_lines": [
+        "                pre_dispatch = eval(",
+        "                    pre_dispatch,",
+        "                    {\"n_jobs\": n_jobs, \"__builtins__\": {}},  # globals",
+        "                    {}  # locals",
+        "                )"
+      ]
+    }
+  ],
+  "clean_negative_regions": []
+}

@@ -39,6 +39,9 @@ htmlcov/
 # Local learning & test repositories
 scratch/
 test_repo/
+data/benchmark_cache/
+data/benchmark_bare_cache/
+tools/
 
 # Vector database & database files
 chroma_db/
@@ -50,6 +53,8 @@ chroma_db/
 .env.*
 *.pem
 *.key
+codeguardian*.private-key.pem
+codeguardian-tomar.2026-11-19.private-key.pem
 
 # IDEs & Editors
 .vscode/
@@ -77,3 +82,6 @@ eval_report.json
 eval_report.csv
 synthetic_benchmark_dataset.json
 hard_negatives_store.json
+
+#for showing the inner working:
+scripts/demo_core_ml.py

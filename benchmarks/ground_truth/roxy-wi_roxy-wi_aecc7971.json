@@ -1,0 +1,208 @@
+{
+  "repo_name": "roxy-wi/roxy-wi (aecc7971)",
+  "url": "https://github.com/roxy-wi/roxy-wi",
+  "pinned_vulnerable_sha": "a10ac7306c252014f97a7213db4a9470300fa064",
+  "pinned_clean_sha": "aecc7971959092fa93e93531f1ffcde33524b031",
+  "language": "python",
+  "loc": 53166,
+  "description": "Auto-extracted benchmark for CVE-2026-33078",
+  "label_quality": "provisional",
+  "labeled_findings": [
+    {
+      "id": "GT-CVE-2026-33078-001",
+      "file": "app/modules/config/common.py",
+      "line_start": 43,
+      "line_end": 43,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 0 line(s) in app/modules/config/common.py.",
+      "deleted_lines": [],
+      "added_lines": [
+        "\tserver_ip = common.is_ip_or_dns(server_ip)"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-002",
+      "file": "app/routes/config/routes.py",
+      "line_start": 40,
+      "line_end": 40,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 0 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [],
+      "added_lines": [
+        "    server_ip = common.is_ip_or_dns(server_ip)"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-003",
+      "file": "app/routes/config/routes.py",
+      "line_start": 54,
+      "line_end": 54,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 0 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [],
+      "added_lines": [
+        "    server_ip = common.is_ip_or_dns(server_ip)"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-004",
+      "file": "app/routes/config/routes.py",
+      "line_start": 153,
+      "line_end": 153,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 1 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [
+        "def versions(service, server_ip):"
+      ],
+      "added_lines": [
+        "@validate()",
+        "def versions(service, server_ip: Union[IPvAnyAddress, DomainName]):",
+        "    server_ip = str(server_ip)"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-005",
+      "file": "app/routes/config/routes.py",
+      "line_start": 177,
+      "line_end": 177,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 1 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [
+        "def show_version(service, server_ip, configver):"
+      ],
+      "added_lines": [
+        "@validate()",
+        "def show_version(service, server_ip: Union[IPvAnyAddress, DomainName], configver):",
+        "    server_ip = str(server_ip)"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-006",
+      "file": "app/routes/config/routes.py",
+      "line_start": 192,
+      "line_end": 192,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 1 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [
+        "def save_version(service, server_ip, configver):"
+      ],
+      "added_lines": [
+        "@validate()",
+        "def save_version(service, server_ip: Union[IPvAnyAddress, DomainName], configver):",
+        "    server_ip = str(server_ip)"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-007",
+      "file": "app/routes/config/routes.py",
+      "line_start": 218,
+      "line_end": 218,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 1 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [
+        "def haproxy_section(server_ip):"
+      ],
+      "added_lines": [
+        "@validate()",
+        "def haproxy_section(server_ip: Union[IPvAnyAddress, DomainName]):",
+        "    server_ip = str(server_ip)"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-008",
+      "file": "app/routes/config/routes.py",
+      "line_start": 235,
+      "line_end": 235,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 1 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [
+        "def haproxy_section_show(server_ip, section):"
+      ],
+      "added_lines": [
+        "@validate()",
+        "def haproxy_section_show(server_ip: Union[IPvAnyAddress, DomainName], section):",
+        "    server_ip = str(server_ip)"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-009",
+      "file": "app/routes/config/routes.py",
+      "line_start": 267,
+      "line_end": 267,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 1 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [
+        "def haproxy_section_save(server_ip):"
+      ],
+      "added_lines": [
+        "@validate()",
+        "def haproxy_section_save(server_ip: Union[IPvAnyAddress, DomainName]):",
+        "    server_ip = str(server_ip)"
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-010",
+      "file": "app/routes/config/routes.py",
+      "line_start": 279,
+      "line_end": 279,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 0 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [],
+      "added_lines": [
+        "    if '..' in config_file or '..' in oldcfg:",
+        "        return jsonify({'error': 'error: .. is not allowed'})",
+        ""
+      ]
+    },
+    {
+      "id": "GT-CVE-2026-33078-011",
+      "file": "app/routes/config/routes.py",
+      "line_start": 343,
+      "line_end": 343,
+      "cwe": "CWE-89",
+      "severity": "HIGH",
+      "label": "vulnerable",
+      "source": "cve-fix-auto",
+      "notes": "Auto-extracted from fix commit aecc7971. Changed 1 line(s) in app/routes/config/routes.py.",
+      "deleted_lines": [
+        "def show_map(server_ip):"
+      ],
+      "added_lines": [
+        "@validate()",
+        "def show_map(server_ip: Union[IPvAnyAddress, DomainName]):",
+        "    server_ip = str(server_ip)"
+      ]
+    }
+  ],
+  "clean_negative_regions": []
+}

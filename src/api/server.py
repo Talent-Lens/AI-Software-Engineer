@@ -40,6 +40,24 @@ async def lifespan(app: FastAPI):
     except Exception as err:
         logger.warning("Orphaned benchmark job recovery warning: %s", err)
 
+    try:
+        from pathlib import Path
+        from src.db.session import SessionLocal
+        from src.db.benchmark_models import ResearchRepo
+        from src.benchmarks.snapshot_importer import import_snapshot
+
+        snapshot_path = Path(__file__).resolve().parents[2] / "benchmarks" / "snapshots" / "latest.json"
+        if snapshot_path.is_file():
+            db = SessionLocal()
+            try:
+                if db.query(ResearchRepo).count() == 0:
+                    res = import_snapshot(db, snapshot_path)
+                    logger.info("Auto-seeded benchmark snapshot on startup: %s", res)
+            finally:
+                db.close()
+    except Exception as err:
+        logger.warning("Startup benchmark snapshot auto-seed warning: %s", err)
+
     yield
     logger.info("Shutting down AI Software Engineer API Server...")
 

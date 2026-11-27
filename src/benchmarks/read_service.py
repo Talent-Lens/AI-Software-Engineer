@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from src.db.benchmark_models import (
     BenchmarkLatencyPass,
@@ -215,22 +215,18 @@ class BenchmarkReadService:
         if os.getenv("BENCHMARK_MODE", "readonly").strip().lower() == "research":
             self.check_and_timeout_stuck_jobs()
 
-        query = self.db.query(ResearchRepo).filter(
-            ResearchRepo.is_excluded == False,
-            ResearchRepo.status.in_(["done", "partial"]),
-        )
-        if verified_only:
-            query = query.filter(ResearchRepo.label_quality == "verified")
-
-        active_repos = query.all()
-        active_repo_ids = {r.id for r in active_repos}
-
         all_repos = self.db.query(ResearchRepo).all()
-        total_repos_count = len([r for r in all_repos if not r.is_excluded and r.status in ("done", "partial")])
-        verified_repos_count = len(
-            [r for r in all_repos if not r.is_excluded and r.status in ("done", "partial") and r.label_quality == "verified"]
-        )
+        repo_by_id = {r.id: r for r in all_repos}
+        all_done_repos = [r for r in all_repos if not r.is_excluded and r.status in ("done", "partial")]
+        total_repos_count = len(all_done_repos)
+        verified_repos_count = len([r for r in all_done_repos if r.label_quality == "verified"])
         provisional_repos_count = total_repos_count - verified_repos_count
+
+        active_repos = [
+            r for r in all_done_repos
+            if not verified_only or r.label_quality == "verified"
+        ]
+        active_repo_ids = {r.id for r in active_repos}
         total_loc = sum(r.loc for r in active_repos if r.loc)
 
         completed_runs = (
@@ -310,7 +306,9 @@ class BenchmarkReadService:
 
                 clean_metrics = [
                     m for m in m_list
-                    if m.repo and m.repo.repo_type != "intentionally_vulnerable" and m.repo.clean_sha
+                    if (repo_obj := repo_by_id.get(m.repo_id))
+                    and repo_obj.repo_type != "intentionally_vulnerable"
+                    and repo_obj.clean_sha
                 ]
                 fpr_avg = (
                     round(sum(m.false_positive_rate for m in clean_metrics) / len(clean_metrics), 4)
@@ -458,7 +456,12 @@ class BenchmarkReadService:
     def get_research_repos(self) -> List[Dict[str, Any]]:
         if os.getenv("BENCHMARK_MODE", "readonly").strip().lower() == "research":
             self.check_and_timeout_stuck_jobs()
-        repos = self.db.query(ResearchRepo).order_by(ResearchRepo.created_at.desc()).all()
+        repos = (
+            self.db.query(ResearchRepo)
+            .options(selectinload(ResearchRepo.metrics), selectinload(ResearchRepo.runs))
+            .order_by(ResearchRepo.created_at.desc())
+            .all()
+        )
         req_tools = list(get_required_tools_prod())
         res = []
         for r in repos:
@@ -490,9 +493,14 @@ class BenchmarkReadService:
         return res
 
     def get_repo_detail(self, repo_id: str) -> Optional[Dict[str, Any]]:
-        repo = self.db.query(ResearchRepo).filter(ResearchRepo.id == repo_id).first()
+        opts = (
+            selectinload(ResearchRepo.metrics),
+            selectinload(ResearchRepo.runs),
+            selectinload(ResearchRepo.findings),
+        )
+        repo = self.db.query(ResearchRepo).options(*opts).filter(ResearchRepo.id == repo_id).first()
         if not repo:
-            repo = self.db.query(ResearchRepo).filter(ResearchRepo.name.ilike(f"%{repo_id}%")).first()
+            repo = self.db.query(ResearchRepo).options(*opts).filter(ResearchRepo.name.ilike(f"%{repo_id}%")).first()
         if not repo:
             return None
 

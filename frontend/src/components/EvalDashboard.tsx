@@ -124,8 +124,11 @@ export const EvalDashboard: React.FC = () => {
   // Blind Triage State
   const [triageUploadLoading, setTriageUploadLoading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isFetchingRef = useRef<boolean>(false);
 
   const loadData = async (isVerifiedOnly = verifiedOnly, silent = false) => {
+    if (silent && isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!silent) setLoading(true);
     setError(null);
     try {
@@ -144,6 +147,7 @@ export const EvalDashboard: React.FC = () => {
       console.error('Failed to load benchmark data:', err);
       setError(err?.message || 'Failed to load research benchmark metrics.');
     } finally {
+      isFetchingRef.current = false;
       setLoading(false);
     }
   };
@@ -152,16 +156,21 @@ export const EvalDashboard: React.FC = () => {
     loadData();
   }, [verifiedOnly]);
 
-  // Live progress polling when any repository is running
+  // Live progress polling only in mutable research mode when a repo is actively running
   useEffect(() => {
-    const hasRunningJobs = repos.some(r => r.status === 'running' || (r.job_stage && r.job_stage !== 'done' && r.job_stage !== 'failed' && r.job_stage !== 'needs_attention'));
+    if (capabilities.readonly) return;
+    const hasRunningJobs = repos.some(
+      (r) =>
+        r.status === 'running' ||
+        (r.job_stage && !['done', 'failed', 'needs_attention', 'partial'].includes(r.job_stage))
+    );
     if (!hasRunningJobs) return;
 
     const interval = setInterval(() => {
       loadData(verifiedOnly, true);
     }, 3000);
     return () => clearInterval(interval);
-  }, [repos, verifiedOnly]);
+  }, [repos, verifiedOnly, capabilities.readonly]);
 
   const handleSelectRepo = async (repoId: string) => {
     setSelectedRepoId(repoId);

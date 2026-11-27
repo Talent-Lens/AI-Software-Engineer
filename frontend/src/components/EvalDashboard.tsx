@@ -125,7 +125,8 @@ export const EvalDashboard: React.FC = () => {
   const [triageUploadLoading, setTriageUploadLoading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadData = async (isVerifiedOnly = verifiedOnly) => {
+  const loadData = async (isVerifiedOnly = verifiedOnly, silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const [overviewData, reposData, capsData] = await Promise.all([
@@ -157,7 +158,7 @@ export const EvalDashboard: React.FC = () => {
     if (!hasRunningJobs) return;
 
     const interval = setInterval(() => {
-      loadData(verifiedOnly);
+      loadData(verifiedOnly, true);
     }, 3000);
     return () => clearInterval(interval);
   }, [repos, verifiedOnly]);
@@ -567,25 +568,35 @@ export const EvalDashboard: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
-            <span>
-              Sample Size: <strong className="text-white">{overview?.total_repos || 0} repos</strong> ({overview?.verified_repos || 0} verified, {overview?.provisional_repos || 0} provisional) • <strong className="text-white">{(overview?.total_loc || 0).toLocaleString()} LOC</strong>
-            </span>
-            <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-[11px] text-slate-300">
-              {`Results snapshot generated ${new Date(overview?.snapshot?.generated_at || overview?.generated_at || Date.now()).toLocaleDateString()} • exploratory, N=${overview?.total_repos ?? 0}`}
-            </span>
-            <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-slate-800">
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={verifiedOnly}
-                  onChange={(e) => setVerifiedOnly(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-0"
-                />
-                <span className={verifiedOnly ? 'text-indigo-400 font-semibold' : 'text-slate-400'}>
-                  Verified Only
+            {loading && !overview ? (
+              <div className="flex items-center gap-3 animate-pulse">
+                <div className="h-4 w-56 rounded bg-slate-800" />
+                <div className="h-5 w-48 rounded bg-slate-800/80" />
+                <div className="h-4 w-24 rounded bg-slate-800/60" />
+              </div>
+            ) : (
+              <>
+                <span>
+                  Sample Size: <strong className="text-white">{overview?.total_repos || 0} repos</strong> ({overview?.verified_repos || 0} verified, {overview?.provisional_repos || 0} provisional) • <strong className="text-white">{(overview?.total_loc || 0).toLocaleString()} LOC</strong>
                 </span>
-              </label>
-            </div>
+                <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-[11px] text-slate-300">
+                  {`Results snapshot generated ${new Date(overview?.snapshot?.generated_at || overview?.generated_at || Date.now()).toLocaleDateString()} • exploratory, N=${overview?.total_repos ?? 0}`}
+                </span>
+                <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-slate-800">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={verifiedOnly}
+                      onChange={(e) => setVerifiedOnly(e.target.checked)}
+                      className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-0"
+                    />
+                    <span className={verifiedOnly ? 'text-indigo-400 font-semibold' : 'text-slate-400'}>
+                      Verified Only
+                    </span>
+                  </label>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -656,41 +667,105 @@ export const EvalDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-4 border-b border-slate-800">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`pb-3 text-sm font-semibold transition border-b-2 flex items-center gap-2 ${
-            activeTab === 'overview'
-              ? 'border-indigo-500 text-indigo-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <BarChart2 className="w-4 h-4" />
-          General Averages ({overview?.total_repos || 0} Repos)
-        </button>
-        <button
-          onClick={() => {
-            if (repos.length > 0 && !selectedRepoId) {
-              handleSelectRepo(repos[0].id);
-            } else if (selectedRepoId && !repoDetail) {
-              handleSelectRepo(selectedRepoId);
-            } else {
-              setActiveTab('drilldown');
-            }
-          }}
-          className={`pb-3 text-sm font-semibold transition border-b-2 flex items-center gap-2 ${
-            activeTab === 'drilldown'
-              ? 'border-indigo-500 text-indigo-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          Per-Repository Ground Truth & Triage
-        </button>
-      </div>
+      {loading && !overview ? (
+        <div className="space-y-8 animate-pulse" aria-label="Loading benchmark dashboard">
+          {/* Skeleton Tabs */}
+          <div className="flex items-center gap-6 border-b border-slate-800 pb-3">
+            <div className="h-5 w-44 rounded bg-slate-800" />
+            <div className="h-5 w-52 rounded bg-slate-800/70" />
+          </div>
 
-      {activeTab === 'overview' ? (
+          {/* Skeleton Top 6 KPI Cards */}
+          <div>
+            <div className="h-4 w-80 rounded bg-slate-800 mb-3" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 flex flex-col justify-between min-h-[144px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="h-3.5 w-28 rounded bg-slate-800" />
+                    <div className="h-4 w-4 rounded-full bg-slate-800" />
+                  </div>
+                  <div className="my-3 space-y-2">
+                    <div className="h-7 w-20 rounded bg-slate-800" />
+                    <div className="h-3 w-32 rounded bg-slate-800/70" />
+                  </div>
+                  <div className="h-2.5 w-full rounded bg-slate-800/60" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Skeleton Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="bg-slate-900/70 border border-slate-800 rounded-xl p-5 h-[340px] flex flex-col justify-between"
+              >
+                <div className="space-y-2">
+                  <div className="h-4 w-48 rounded bg-slate-800" />
+                  <div className="h-3 w-64 rounded bg-slate-800/70" />
+                </div>
+                <div className="flex-1 my-4 rounded-lg bg-slate-800/40 border border-slate-800/60" />
+                <div className="flex items-center justify-center gap-4">
+                  <div className="h-3 w-16 rounded bg-slate-800/70" />
+                  <div className="h-3 w-16 rounded bg-slate-800/70" />
+                  <div className="h-3 w-16 rounded bg-slate-800/70" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Skeleton Breakdown Table */}
+          <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
+            <div className="h-4 w-56 rounded bg-slate-800" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <div key={idx} className="h-10 w-full rounded bg-slate-800/50" />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Navigation Tabs */}
+          <div className="flex items-center gap-4 border-b border-slate-800">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`pb-3 text-sm font-semibold transition border-b-2 flex items-center gap-2 ${
+                activeTab === 'overview'
+                  ? 'border-indigo-500 text-indigo-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <BarChart2 className="w-4 h-4" />
+              General Averages ({overview?.total_repos || 0} Repos)
+            </button>
+            <button
+              onClick={() => {
+                if (repos.length > 0 && !selectedRepoId) {
+                  handleSelectRepo(repos[0].id);
+                } else if (selectedRepoId && !repoDetail) {
+                  handleSelectRepo(selectedRepoId);
+                } else {
+                  setActiveTab('drilldown');
+                }
+              }}
+              className={`pb-3 text-sm font-semibold transition border-b-2 flex items-center gap-2 ${
+                activeTab === 'drilldown'
+                  ? 'border-indigo-500 text-indigo-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              Per-Repository Ground Truth & Triage
+            </button>
+          </div>
+
+          {activeTab === 'overview' ? (
         <>
           {/* SECTION 1: TOP 6 MACRO-AVERAGE KPI CARDS */}
           <div>
@@ -1591,6 +1666,26 @@ export const EvalDashboard: React.FC = () => {
             </div>
           </div>
 
+          {detailLoading ? (
+            <div className="space-y-5 animate-pulse" aria-label="Loading repository details">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="h-28 rounded-xl bg-slate-900/70 border border-slate-800 p-4 space-y-3">
+                    <div className="h-3.5 w-24 rounded bg-slate-800" />
+                    <div className="h-6 w-16 rounded bg-slate-800" />
+                    <div className="h-3 w-32 rounded bg-slate-800/70" />
+                  </div>
+                ))}
+              </div>
+              <div className="h-72 rounded-xl bg-slate-900/70 border border-slate-800 p-5 space-y-3">
+                <div className="h-4 w-48 rounded bg-slate-800" />
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <div key={idx} className="h-9 w-full rounded bg-slate-800/50" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
           {/* Stage-Level Timing Breakdown */}
           {repoDetail?.stage_timings && Object.keys(repoDetail.stage_timings).length > 0 && (
             <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs space-y-3">
@@ -1820,7 +1915,11 @@ export const EvalDashboard: React.FC = () => {
               </table>
             </div>
           </div>
+            </>
+          )}
         </div>
+      )}
+        </>
       )}
 
       {/* ONE-STEP ADD REPOSITORY MODAL */}

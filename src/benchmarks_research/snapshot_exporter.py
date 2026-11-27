@@ -51,7 +51,7 @@ _SENSITIVE_KEYS = {
 _TOKEN_RE = re.compile(
     r"(ghp_[A-Za-z0-9_]{10,}|github_pat_[A-Za-z0-9_]{10,}|gsk_[A-Za-z0-9_]{10,}|Bearer\s+[A-Za-z0-9._\-]{10,})"
 )
-_ABS_WIN_PATH_RE = re.compile(r"[A-Za-z]:[\\/][^\s\"'<>|]+")
+_ABS_WIN_PATH_RE = re.compile(r"(?<![A-Za-z])[A-Za-z]:[\\/][^\s\"'<>|]+")
 _ABS_TEMP_UNIX_RE = re.compile(r"/(?:tmp|var/tmp|Users|home)/[^\s\"'<>|]+")
 
 

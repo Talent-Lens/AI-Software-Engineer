@@ -3,10 +3,13 @@ FastAPI Server Core Application (TASK-FS1 & TASK-FS6)
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.api.routers import health, analyze, retrieval, eval as eval_router, agents, feedback, analytics, github, telemetry, chat, benchmark, auth
 from src.api.websockets import manager, stream_pipeline_execution
@@ -92,15 +95,30 @@ app.add_middleware(
 app.add_middleware(TelemetryMiddleware)
 
 
+REQUEST_TIMEOUT_SECONDS = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "30"))
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception on %s %s", request.method, request.url.path, exc_info=exc)
+    return JSONResponse({"detail": "Internal Server Error"}, status_code=500)
+
+
 @app.middleware("http")
-async def benchmark_readonly_404_middleware(request, call_next):
-    response = await call_next(request)
+async def request_timeout_and_readonly_404_middleware(request: Request, call_next):
+    try:
+        response = await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        logger.error("Request timed out after %.1fs: %s %s", REQUEST_TIMEOUT_SECONDS, request.method, request.url.path)
+        return JSONResponse({"detail": "Request timed out"}, status_code=504)
+    except Exception as exc:
+        logger.exception("Unhandled middleware exception on %s %s", request.method, request.url.path, exc_info=exc)
+        return JSONResponse({"detail": "Internal Server Error"}, status_code=500)
     if (
         response.status_code == 405
-        and request.url.path.startswith("/api/v1/benchmarks")
+        and request.url.path.startswith("/api/v1/benchmark")
         and benchmark.get_benchmark_mode() != "research"
     ):
-        from fastapi.responses import JSONResponse
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     return response
 

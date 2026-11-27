@@ -754,7 +754,7 @@ def _execute_benchmark(repo_url: str, test_type: str) -> BenchmarkResult:
 # Main endpoint
 # ---------------------------------------------------------------------------
 
-@read_router.post("/benchmark", response_model=BenchmarkResponse)
+@research_router.post("/benchmark", response_model=BenchmarkResponse)
 async def run_benchmark(request: BenchmarkRequest) -> BenchmarkResponse:
     """
     Fair, independent benchmark evaluation.

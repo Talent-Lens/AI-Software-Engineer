@@ -343,3 +343,62 @@ def test_user_scans_and_benchmark_data_stay_independent(tmp_path):
     finally:
         db.close()
         empty_research_db.close()
+
+
+def test_readonly_routes_never_crash_or_touch_git_docker_or_tools(tmp_path, monkeypatch):
+    import subprocess
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from src.api.routers.benchmark import create_benchmark_router
+    from src.db.session import get_benchmark_read_db
+
+    _, db = _make_sqlite_memory_session()
+    try:
+        repo = ResearchRepo(
+            id="ro-repo-1",
+            name="org/sample-repo",
+            url="https://github.com/org/sample-repo",
+            pinned_sha="abc123",
+            status="done",
+            loc=100,
+        )
+        db.add(repo)
+        db.commit()
+
+        # Point cache env to an empty directory (no bare cache or repo cache)
+        empty_cache = tmp_path / "empty_cache"
+        empty_cache.mkdir()
+        monkeypatch.setenv("BENCHMARK_CACHE_DIR", str(empty_cache))
+        monkeypatch.setenv("BENCHMARK_MODE", "readonly")
+
+        def _forbid_subprocess(*args, **kwargs):
+            raise AssertionError(f"Read-only route must not invoke subprocess: {args}")
+
+        monkeypatch.setattr(subprocess, "run", _forbid_subprocess)
+        monkeypatch.setattr(subprocess, "Popen", _forbid_subprocess)
+
+        app = FastAPI()
+        app.include_router(create_benchmark_router(mode="readonly"), prefix="/api/v1")
+
+        def _override_read_db():
+            yield db
+
+        app.dependency_overrides[get_benchmark_read_db] = _override_read_db
+        client = TestClient(app)
+
+        # Every route registered in readonly mode must succeed without touching git/docker/tools
+        assert client.get("/api/v1/benchmarks/capabilities").status_code == 200
+        assert client.get("/api/v1/benchmarks/overview").status_code == 200
+        assert client.get("/api/v1/benchmarks/repos").status_code == 200
+        assert client.get("/api/v1/benchmarks/repos/ro-repo-1").status_code == 200
+        assert client.get("/api/v1/benchmarks/repos/missing-id").status_code == 404
+        assert client.get("/api/v1/benchmarks/latency-pass/latest").status_code == 200
+
+        # Crashing /benchmark route must NOT be registered in readonly mode (404)
+        res_post = client.post(
+            "/api/v1/benchmark",
+            json={"repo_url": "https://github.com/org/sample-repo", "test_type": "security"},
+        )
+        assert res_post.status_code == 404
+    finally:
+        db.close()

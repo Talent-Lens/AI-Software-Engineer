@@ -67,8 +67,8 @@ def create_active_engine(db_url: str):
     try:
         remote_engine = create_engine(
             db_url,
-            pool_size=3,
-            max_overflow=3,
+            pool_size=5,
+            max_overflow=5,
             pool_timeout=10,
             pool_pre_ping=True,
             pool_recycle=300,
@@ -201,6 +201,10 @@ def get_benchmark_read_db() -> Generator[Session, None, None]:
                 db.execute(text("PRAGMA query_only = OFF"))
             except Exception:
                 pass
+        try:
+            db.rollback()
+        except Exception:
+            pass
         db.close()
 
 

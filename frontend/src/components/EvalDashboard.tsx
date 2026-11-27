@@ -1654,15 +1654,33 @@ export const EvalDashboard: React.FC = () => {
                   />
                 </>
               )}
-              <a
-                href={repoDetail?.repo?.url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
-              >
-                GitHub Source
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              {(() => {
+                const rawUrl = (repoDetail?.repo?.url || '').trim();
+                const urlMatch = rawUrl.match(/^https:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git|\/.*)?$/);
+                const nameMatch = (repoDetail?.repo?.name || '').trim().match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/);
+                const owner = urlMatch?.[1] || nameMatch?.[1];
+                const repoName = urlMatch?.[2] || nameMatch?.[2];
+                const safeGitHubUrl = owner && repoName ? `https://github.com/${owner}/${repoName}` : null;
+                return safeGitHubUrl ? (
+                  <a
+                    href={safeGitHubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+                  >
+                    GitHub Source
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                ) : (
+                  <span
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-500 text-xs font-medium cursor-not-allowed"
+                    title="Invalid or unavailable GitHub repository URL"
+                  >
+                    GitHub Source
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </span>
+                );
+              })()}
             </div>
           </div>
 

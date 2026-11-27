@@ -12045,7 +12045,7 @@
     {
       "id": "81b476fc-12fe-4604-8263-fabd00eece09",
       "name": "aio-libs/aiohttp (1c335944)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/aio-libs/aiohttp",
       "pinned_sha": "33ccdfb0a12690af5bb49bda2319ec0907fa7827",
       "clean_sha": "1c335944d6a8b1298baf179b7c0b3069f10c514b",
       "language": "python",
@@ -12099,7 +12099,7 @@
     {
       "id": "d6248b40-3ded-4c7f-a748-d493a96ab331",
       "name": "joblib/joblib (b90f10ef)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/joblib/joblib",
       "pinned_sha": "1fdf3086674d7b1be27688e8c7aebd3159d89997",
       "clean_sha": "b90f10efeb670a2cc877fb88ebb3f2019189e059",
       "language": "python",
@@ -12138,7 +12138,7 @@
     {
       "id": "f0a6a5cd-4b57-4588-b6f9-8190f8892c7b",
       "name": "pypa/setuptools (88807c70)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/pypa/setuptools",
       "pinned_sha": "4a0a9ce587515edce83ab97aa5c7943c045ac180",
       "clean_sha": "88807c7062788254f654ea8c03427adc859321f0",
       "language": "python",
@@ -12222,7 +12222,7 @@
     {
       "id": "ba7b96b0-4bda-43f7-909c-495d2e3b31a2",
       "name": "tqdm/tqdm (4e613f84)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/tqdm/tqdm",
       "pinned_sha": "cc372d09dcd5a5eabdc6ed4cf365bdb0be004d44",
       "clean_sha": "4e613f84ed2ae029559f539464df83fa91feb316",
       "language": "python",
@@ -12250,7 +12250,7 @@
     {
       "id": "45f73563-a7ae-42a4-8847-d01089253861",
       "name": "PyMySQL/PyMySQL (521e4005)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/PyMySQL/PyMySQL",
       "pinned_sha": "7f032a699d55340f05101deb4d7d4f63db4adc11",
       "clean_sha": "521e40050cb386a499f68f483fefd144c493053c",
       "language": "python",
@@ -12289,7 +12289,7 @@
     {
       "id": "aa98d1f7-c7a6-4348-a704-585f87d52c7d",
       "name": "erdogant/pypickle (14b4cae7)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/erdogant/pypickle",
       "pinned_sha": "be932ef15b1f6e0122dd58a671bde551d0d9f0e8",
       "clean_sha": "14b4cae704a0bb4eb6723e238f25382d847a1917",
       "language": "javascript",
@@ -12368,7 +12368,7 @@
     {
       "id": "194b9989-3df6-42d5-9ae2-281795908a9b",
       "name": "scitokens/scitokens (3dba1088)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/scitokens/scitokens",
       "pinned_sha": "66b075c35da18f8364276553513a53c596b4b8e3",
       "clean_sha": "3dba108853f2f4a6c0f2325c03779bf083c41cf2",
       "language": "python",
@@ -12402,7 +12402,7 @@
     {
       "id": "a7a4273f-63fe-4fc9-b49b-69ce20a1a85d",
       "name": "roxy-wi/roxy-wi (aecc7971)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/roxy-wi/roxy-wi",
       "pinned_sha": "a10ac7306c252014f97a7213db4a9470300fa064",
       "clean_sha": "aecc7971959092fa93e93531f1ffcde33524b031",
       "language": "python",
@@ -12456,7 +12456,7 @@
     {
       "id": "65f5b112-08f8-46b7-b7f2-03ba97799aec",
       "name": "Parsl/parsl (013a9284)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/Parsl/parsl",
       "pinned_sha": "2c37ae3e75137095302dac5f9cd3ca956cb51a47",
       "clean_sha": "013a928461e70f38a33258bd525a351ed828e974",
       "language": "python",
@@ -12490,7 +12490,7 @@
     {
       "id": "8e64d213-78d9-47f9-9b55-49f915f32080",
       "name": "erev0s/VAmPI (f16052dc)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/erev0s/VAmPI",
       "pinned_sha": "f16052dce83f05847133ec98f01c5193a41de7d8",
       "clean_sha": null,
       "language": "python",
@@ -12518,7 +12518,7 @@
     {
       "id": "f663ca06-23ea-4ce6-a2d1-18e6492fc175",
       "name": "ryanmcmorrowsnyk/vulnerable-python-app (bf9c954b)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/ryanmcmorrowsnyk/vulnerable-python-app",
       "pinned_sha": "bf9c954b327a5ec872b7fd65642760b3837af531",
       "clean_sha": null,
       "language": "python",
@@ -12546,7 +12546,7 @@
     {
       "id": "679419e8-f9d4-41f1-a36a-73774d4b633e",
       "name": "Contrast-Security-OSS/PyGoat (7254f215)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/Contrast-Security-OSS/PyGoat",
       "pinned_sha": "7254f215fbff49bf61302c47b88fdadc7360c724",
       "clean_sha": null,
       "language": "python",
@@ -12574,7 +12574,7 @@
     {
       "id": "145d31a9-4eed-4e17-9158-e70124d096be",
       "name": "red-and-black/DjangoGoat (b5123eba)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/red-and-black/DjangoGoat",
       "pinned_sha": "b5123eba8c002adb4f5513197e7e69a724385d29",
       "clean_sha": "5e6aaa6d0497bf24abd179304e6ca51295a8091d",
       "language": "python",
@@ -12688,7 +12688,7 @@
     {
       "id": "283c5c37-4fa6-4efb-ad93-352af3cf0960",
       "name": "stamparm/DSVW (9ca3c9ac)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/stamparm/DSVW",
       "pinned_sha": "9ca3c9acf3defa0a6148d40e5f5cebeb5dcbb908",
       "clean_sha": null,
       "language": "python",
@@ -12716,7 +12716,7 @@
     {
       "id": "75a2de88-d693-4bbd-82d9-833c73a1f8c8",
       "name": "OWASP-Benchmark/BenchmarkPython (f1291485)",
-      "url": "http[LOCAL_PATH]",
+      "url": "https://github.com/OWASP-Benchmark/BenchmarkPython",
       "pinned_sha": "f1291485808b66e20ddb6b01b10dc71b3df8c8ba",
       "clean_sha": null,
       "language": "python",
@@ -288534,5 +288534,5 @@
       "computed_at": "2026-11-26T17:57:45.380665"
     }
   ],
-  "sha256": "84a3773e470355b33305f1c8d3268b22f4edae8cff4e74a32c7a617c00abe048"
+  "sha256": "4da4ebe8fd80d7222da17046aaa848765cf774655ebc1b4ab52f2a837f2b9b2f"
 }

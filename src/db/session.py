@@ -67,10 +67,12 @@ def create_active_engine(db_url: str):
     try:
         remote_engine = create_engine(
             db_url,
-            pool_size=10,
-            max_overflow=20,
+            pool_size=3,
+            max_overflow=3,
+            pool_timeout=10,
             pool_pre_ping=True,
             pool_recycle=300,
+            connect_args={"connect_timeout": 5},
             echo=False,
         )
         # Test connection immediately

@@ -350,10 +350,37 @@ export const App: React.FC = () => {
 
   if (authState.isLoading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#0a0a0f] text-zinc-400 font-mono text-xs">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span>Verifying platform credentials...</span>
+      <div className="flex flex-col h-screen w-screen bg-[#0a0a0f] text-zinc-400 overflow-hidden animate-pulse">
+        {/* Skeleton Header */}
+        <div className="h-14 border-b border-slate-800/80 px-6 flex items-center justify-between bg-[#0d0d14]">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-slate-800" />
+            <div className="h-4 w-32 rounded bg-slate-800" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-7 w-24 rounded-lg bg-slate-800" />
+            <div className="h-7 w-24 rounded-lg bg-slate-800" />
+            <div className="h-7 w-28 rounded-lg bg-slate-800" />
+          </div>
+        </div>
+        {/* Skeleton Main Workspace */}
+        <div className="flex-1 p-8 max-w-6xl w-full mx-auto space-y-6">
+          <div className="space-y-2">
+            <div className="h-8 w-72 rounded-lg bg-slate-800" />
+            <div className="h-4 w-96 rounded bg-slate-800/70" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-64 rounded-2xl bg-slate-900/70 border border-slate-800/80 p-6 space-y-4">
+              <div className="h-5 w-40 rounded bg-slate-800" />
+              <div className="h-4 w-full rounded bg-slate-800/70" />
+              <div className="h-11 w-full rounded-xl bg-slate-800" />
+            </div>
+            <div className="h-64 rounded-2xl bg-slate-900/70 border border-slate-800/80 p-6 space-y-4">
+              <div className="h-5 w-40 rounded bg-slate-800" />
+              <div className="h-4 w-full rounded bg-slate-800/70" />
+              <div className="h-11 w-full rounded-xl bg-slate-800" />
+            </div>
+          </div>
         </div>
       </div>
     );
